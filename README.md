@@ -1,2 +1,51 @@
 # noticeavoid
 An Atari 2600 game to help people understand social anxiety
+
+# Ever want to help on a real 2600 game?
+Well I have wanted to make a game for the 2600 for a very long time. I finally found the right idea.  NoticeAvoid is a game that lets you take a Gemba Walk in the shoes of someone with social anxiety.
+
+
+## Gameplay
+You are the dot, like in 2600 Adventure.  Your friend Chad didn't make it to class today.  You have to bring him his book and his homework assignment.  This might seem easy for most people, but with social anxiety, some things are difficult.
+
+### Lookie-loos and being noticed
+As you begin the journey to Chad's house, you will see people looking around. They might notice you.  The bullets coming from the people aren't bullets but where they are looking.  If they see you, you need to listen to your anxiety and do things to turn down their attention.  Maybe looking at your cell phone, throwing up your hoodie, or hanging out against the wall might help.
+
+### Game 1- A Simple Delivery
+You must take Chad his homework and book. 
+You can wear your hoodie, use your iPhone, and/or stand against the wall to avoid people noticing you. In game 1, their interaction doesn't matter much.
+
+You see what you are using or wearing in the top left corner.
+You move the dot with the joystick.
+You select your hoodie or your phone to be in or out of use with the player A and player B difficulty switches respectively.  Changing the difficulty switch alters your use of the hoodie or phone.  You can do this in the middle of the game.
+
+You drive the dot that represents you from your house to Chad's.  If you do this in the minimum amount of time, you win the max delivery points of 1000.  Take longer, you get fewer points.  Delivery points are shown in black on the left top of the screen.
+
+The goal of game 1 is to make your 1000 points.
+
+Your anxiety isn't considered in game 1.
+
+### Game 2 - Anxiety Driver
+Play as game 1.  There are no points for delivery. Instead, you get points for listening to your anxiety.
+
+Anxiety is represented by a static-like noise. The noise gets louder when you are more anxious.  Anxiety is driven by random situations and lookie-loos who notice you. Anxiety is mostly random, but even that randomness has a distribution model that resembles my good friend's situation.  Sometimes, anxiety increases with no apparent driver.
+
+If you do not listen to your anxiety, you will get no points.
+If you listen and act, you will get anxiety listening points.
+
+You can use your hoodie, the cell phone, or hang out against the wall. All of those actions will reduce the attention you get from the lookie-loos. The actions might help with listening to your anxiety. Getting to Chad's place or even returning to your own home will end the game with your current anxiety listening score.  The maximum anxiety listening score is random.  It's up to you how you want to deal with your anxiety.  Anxiety listening points are shown in red on right top of the screen.
+
+The goal of game 2 is to the most anxiety listening points.
+
+Your delivery goal is not considered in game 2.
+
+### Game 3 - NOTICE AVOID
+Both scores are considered in game 3.  You might not make the maximum delivery points while trying to deal with your anxiety. 
+
+Your final score is a combination of delivery points and anxiety listening points.
+
+## Building
+Get the game source and throw it in DASM. Run the result in Stella.
+Or take the raw noticeavoid.asm file and paste it into an online emulation/authoring tool like https://8bitworkshop.com/v3.10.0/?platform=vcs&file=examples%2Fmissiles.a
+
+Have a good time. If this game helps you understand others, then it is a wild success.
