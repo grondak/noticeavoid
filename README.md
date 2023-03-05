@@ -51,23 +51,24 @@ Or take the raw noticeavoid.asm file and paste it into an online emulation/autho
 Have a good time. If this game helps you understand others, then it is a wild success.
 
 ## Kernel Features
-This game has the following TIA assignments:
+### Hardware Usage
+#### TIA assignments:
 * Ball: player- changes color when back is against wall to avoid notice
 * Missiles 0 & 1: the eyeline from the Lookie-Loos
 * Players 0 & 1:
   * Score letters
   * Your picture that shows what you are doing
   * Lookie-Loos
-Background: just black
-Playfield: shows where you are on your journey to experience social anxiety and try to help Chad.
+* Background: just black
+* Playfield: shows where you are on your journey to experience social anxiety and try to help Chad.
 
-The Game field is drawn:
+#### The Game field is drawn:
 1. Score
 2. Your picture
 3. Playfield
 4. Your dot, Lookie-Loos, their eyelines.
 
-Features:
+#### Features:
 * joystick movement input: moving the ball, which represents you
 * joystick fire button input: when you are against the wall, this makes you stand with your back to the wall
 * difficulty switch input
@@ -78,11 +79,10 @@ Features:
   2. Right channel has the noise of anxiety
 
 
-  Updates
+## Updates
   3/4/2023: Adding some few initial files with some sample/test code 
 
 
-  Bio:
+## Bio:
   Tony Reynolds got his Atari VCS in 1977. With his family, they had lots of cool games. Just now found the right game to write for the 2600.
 
-  
