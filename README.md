@@ -1,8 +1,8 @@
-# noticeavoid
+# Notice Avoid
 An Atari 2600 game to help people understand social anxiety
 
 # Ever want to help on a real 2600 game?
-Well I have wanted to make a game for the 2600 for a very long time. I finally found the right idea.  NoticeAvoid is a game that lets you take a Gemba Walk in the shoes of someone with social anxiety.
+I have wanted to make a game for the 2600 for a very long time. I finally found the right idea.  Notice Avoid is a game that lets you take a Gemba Walk in the shoes of someone with social anxiety.
 
 
 ## Gameplay
@@ -39,7 +39,7 @@ The goal of game 2 is to the most anxiety listening points.
 
 Your delivery goal is not considered in game 2.
 
-### Game 3 - NOTICE AVOID
+### Game 3 - Notice Avoid
 Both scores are considered in game 3.  You might not make the maximum delivery points while trying to deal with your anxiety. 
 
 Your final score is a combination of delivery points and anxiety listening points.
