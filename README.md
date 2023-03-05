@@ -23,7 +23,7 @@ You drive the dot that represents you from your house to Chad's.  If you do this
 
 The goal of game 1 is to make your 1000 points.
 
-Your anxiety isn't considered in game 1.
+Your anxiety isn't considered in game 1. In this game, you have no anxiety.
 
 ### Game 2 - Anxiety Driver
 Play as game 1.  There are no points for delivery. Instead, you get points for listening to your anxiety.
@@ -35,9 +35,9 @@ If you listen and act, you will get anxiety listening points.
 
 You can use your hoodie, the cell phone, or hang out against the wall. All of those actions will reduce the attention you get from the lookie-loos. The actions might help with listening to your anxiety. Getting to Chad's place or even returning to your own home will end the game with your current anxiety listening score.  The maximum anxiety listening score is random.  It's up to you how you want to deal with your anxiety.  Anxiety listening points are shown in red on right top of the screen.
 
-The goal of game 2 is to the most anxiety listening points.
+The goal of game 2 is to get the most anxiety listening points.
 
-Your delivery goal is not considered in game 2.
+Your delivery goal is not considered in game 2. In this game, you are wandering to understand what people look at and how to go under the radar.
 
 ### Game 3 - Notice Avoid
 Both scores are considered in game 3.  You might not make the maximum delivery points while trying to deal with your anxiety. 
@@ -46,7 +46,7 @@ Your final score is a combination of delivery points and anxiety listening point
 
 ## Building
 Get the game source and throw it in DASM. Run the result in Stella.
-Or take the raw noticeavoid.asm file and paste it into an online emulation/authoring tool like https://8bitworkshop.com/v3.10.0/?platform=vcs&file=examples%2Fmissiles.a
+Or, take the raw noticeavoid.asm file and paste it into an online emulation/authoring tool like https://8bitworkshop.com/v3.10.0/?platform=vcs&file=examples%2Fmissiles.a
 
 Have a good time. If this game helps you understand others, then it is a wild success.
 
