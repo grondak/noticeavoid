@@ -1,23 +1,10 @@
-	processor 6502          ; Ex. 1 Collision Detection - Bouncing Ball
-                                ;
-	include	 "vcs.h"	; this example uses the bounce/reflect method used in the game COMBAT
-	include  "macro.h"	;  
-                                
-	; Subscribe to 8Blit for more videos for programming the ATARI 2600.
-	; https://www.youtube.com/8blit
-	;
-	; Please consider supporting the channel by becoming a patron.
-	; Your support is greatly appreciated! https://www.patreon.com/8blit
-	;
-	; Visit our website
-	; https://www.8blit.com
-
-	include "xmacro.h"
-; define constants
-THREE_COPIES    equ %011
-PFFG	equ $0F
-PFBG	equ $00
-
+	processor 6502          ; Notice Avoid https://github.com/grondak/noticeavoid
+	include	 "vcs.h"
+	include  "macro.h"
+    include "xmacro.h"
+;------------------------------------------------
+; Variables - some made at https://alienbill.com/2600/playerpalnext.html
+;------------------------------------------------
 	seg.u	vars		; uninitialized segment
 	org	$80             ; origin set at base of ram
 temp1	ds 1 ; temporary variable
@@ -25,15 +12,87 @@ loopCount ds 1; a better name
 XPos .byte
 YPos .byte
 
+spriteYPosition		ds 1	; 192 is at the top of the screen, the constant VALUE_OF_Y_AT_SCREEN_BOTTOM gives us the bottom.
+currentSpriteLine	ds 1	; (0 &lt;= currentSpriteLine &lt; SPRITE_HEIGHT) for each frame
+hPosition			ds 1
+hPositionFrac		ds 1
+playerBuffer		ds 1
+spriteMoving		ds 1	; Boolean. We use this to see if we stopped moving
+animFrameLineCtr	ds 1
+faceDelay			ds 1
+spriteLineColor		ds 1
+hPositionIndex		ds 1
+faceDuration		ds 1
+
+;------------------------------------------------
+; Constants - some made at https://alienbill.com/2600/playerpalnext.html
+;------------------------------------------------
+
+; Modify values to suit style
+;
+FACE_DURATION = 4			; Number of frames each face lasts on screen. Decrease to speed up, increase to slow down.
+SLO_MO_FACE_DURATION = 30	; Same as above, applicable when "slo-mo" is activated (i.e. player holds fire button).
+SPRITE_HEIGHT = 8			; Native number of pixels tall the sprite is (before being stretched by a 2LK or whatever).
+NUM_ANIMATION_FACES = 9		; Number of faces of animation. (!)Corresponds with number of color tables(!)
+MIRROR = 1					; If true, sprite mirrors when moved left.
+X_LK = 1					; set to 1 for 1LK, 2 for 2LK, etc.
+SPRITE_WIDTH = 1			; set to 1, 2, or 4, anything else is right out
+BG_COLOR = $00				; background color
+VALUE_OF_Y_AT_SCREEN_BOTTOM = 192-192/X_LK
+VERTICAL_CENTER_OF_SCREEN = 192-(192-VALUE_OF_Y_AT_SCREEN_BOTTOM)/2
+THREE_COPIES    equ %011
+PFFG	equ $0F
+PFBG	equ $00
+
+;------------------------------------------------
+; Macros (hey, my first macros!) - made at https://alienbill.com/2600/playerpalnext.html
+;------------------------------------------------
+
+	MAC KERNAL
+		REPEAT X_LK
+			sta WSYNC
+		REPEND
+	ENDM
+	
+	MAC UP_DIST_MACRO
+		inc spriteYPosition
+		
+		IF X_LK = 1
+			inc spriteYPosition		; we move a little extra to speed up vertical motion in 1LK
+		ENDIF
+	ENDM
+
+	MAC DOWN_DIST_MACRO
+		dec spriteYPosition
+		
+		IF X_LK = 1
+			dec spriteYPosition		; we move a little extra to speed up vertical motion in 1LK
+		ENDIF
+	ENDM
+
 	seg	Code    	; start of main segment
 	org $F000
-
-Reset:	
+reset:	
 	CLEAN_START
-
-NAFrame:
+naFrame: ; draw one Notice Avoid Frame
 	VERTICAL_SYNC
 	TIMER_SETUP 37 ; V-Blank
+	jsr photoDraw ; draw the photo first
+; skip 20 more lines for positioning
+	TIMER_SETUP 20 
+	TIMER_WAIT
+	jsr streetsDraw ; draw the streets one line at a time
+; now wait the rest of the screen
+	TIMER_SETUP 32
+    TIMER_WAIT
+; now wait the overscan
+	TIMER_SETUP 30
+    TIMER_WAIT
+	jmp naFrame
+
+
+
+photoDraw:
 	lda #75
 	sta loopCount	; scanline counter
 	lda #$00
@@ -59,14 +118,11 @@ NAFrame:
 	sta VDELP0	; we need the VDEL registers
 	sta VDELP1	; so we can do our 4-store trick
 	TIMER_WAIT ; actually wait the v-sync
-
-
 	TIMER_SETUP 20 ; skip 20 lines for positioning
 	TIMER_WAIT
-
 	SLEEP 40
 ; dump out our player photo
-PhotoLoop:
+photoLoop:
 	ldy loopCount                   ; 3     (3) 
 	lda photo_0,y                   ; 4     (7)
 	sta GRP0                        ; 3     (10) 0 -> [GRP0]
@@ -85,92 +141,87 @@ PhotoLoop:
 	sty GRP1                        ; 3     (52) 5 -> [GRP1] ; 4 -> GRP0
 	sta GRP0                        ; 3     (55) 5 -> GRP1 
 	dec loopCount                   ; 5     (60)
-	bpl PhotoLoop                   ; 3     (63)
+	bpl photoLoop                   ; 3     (63)
+	rts
 
-	TIMER_SETUP 20 ; skip 20 more lines for positioning
-	TIMER_WAIT
 
+streetsDraw:
 ; dump in the mean streets
 	lda #PFBG
 	sta COLUBK
 	lda #PFFG
 	sta COLUPF
 	ldx #8
-StreetsOuter:
+streetsOuter:
 	ldy #7
-StreetsLoop:
+streetsInner:
 	sta WSYNC	; wait for next scanline
-	lda PFData0,y
+	lda pfData0,y
 	sta PF0		; set the PF1 playfield pattern register
-	lda PFData1,y
+	lda pfData1,y
 	sta PF1		; set the PF1 playfield pattern register
-	lda PFData2,y
+	lda pfData2,y
 	sta PF2		; set the PF2 playfield pattern register
+	jsr tempLoosDraw
 	dey
-	bne StreetsLoop
+	bne streetsInner
 	dex
-	bne StreetsOuter
+	bne streetsOuter
 ; clear out the playfield so it doesn't display when we don't want it.
 	sta WSYNC
 	lda #0
 	sta PF0
 	sta PF1
 	sta PF2
-
-; now wait the rest of the screen
-	TIMER_SETUP 32
-    TIMER_WAIT
-
-; now wait the overscan
-	TIMER_SETUP 30
-    TIMER_WAIT
-	jmp NAFrame
-
-; sum of all waits = 3 + 37 + 192 + 30
+	rts
 
 
 
-MoveJoystick
+; Draw some LookieLoos
+tempLoosDraw:
+	rts
+
+moveJoystick:
 ; Move vertically
 ; (up and down are actually reversed since ypos starts at bottom)
 	ldx YPos
 	lda #%00100000	;Up?
 	bit SWCHA
-	bne SkipMoveUp
+	bne skipMoveUp
     cpx #2
-    bcc SkipMoveUp
+    bcc skipMoveUp
 	dex
-SkipMoveUp
+skipMoveUp:
 	lda #%00010000	;Down?
 	bit SWCHA 
-	bne SkipMoveDown
+	bne skipMoveDown
     cpx #183
-    bcs SkipMoveDown
+    bcs skipMoveDown
     inx
-SkipMoveDown
+skipMoveDown:
 	stx YPos
 ; Move horizontally
     ldx XPos
 	lda #%01000000	;Left?
 	bit SWCHA
-	bne SkipMoveLeft
+	bne skipMoveLeft
     cpx #16
-    bcc SkipMoveLeft
+    bcc skipMoveLeft
     dex
-SkipMoveLeft
+skipMoveLeft:
 	lda #%10000000	;Right?
 	bit SWCHA 
-	bne SkipMoveRight
+	bne skipMoveRight
     cpx #153
-    bcs SkipMoveRight
+    bcs skipMoveRight
     inx
-SkipMoveRight
+skipMoveRight:
 	stx XPos
 	rts
 
 ; https://www.flickr.com/photos/tokyodrifter/4132540774/in/photolist-7ibmp1-7kwDQr-6drtzM-7i7rqD-fVoZL2-283iFVj-7i7rtP-jYc5Bt-B84WBv-7ibmpY-bZTLow-dEY7Uh-qgio3b-ezNHdC-7i7rrr-7i7TLn-2j4x2vd-nfcDxV-4n8mWY-oMAYTH-dEZXBE-uW2BtA-2i4aDit-nYsFmQ-vo5JMz-5T3mhX-NQZLh3-bBAki7-eZwFDo-cm8FiA-2k3G9o1-qCxgBM-edxNEE-69tfxm-4VoNiK-d3aAQh-oZFiyw-nNrGQY-r63Zzb-BCmnBS-f5sW2P-2d3dWDA-agRe5T-a6uZq8-aNupzD-dRJQVC-6b3nTH-D9as7H-5p8iUR-h1bFAk
 	align $100
-photo_0
+photo_0:
 	BYTE %00000000
 	BYTE %00000000
 	BYTE %00000000
@@ -251,7 +302,7 @@ photo_0
 
 	align $100
 
-photo_1
+photo_1:
 	BYTE %00000000
 	BYTE %00000000
 	BYTE %00000000
@@ -331,7 +382,7 @@ photo_1
 	BYTE %00000000
 
 	align $100
-photo_2
+photo_2:
 	BYTE %00000000
 	BYTE %00000000
 	BYTE %00000000
@@ -411,7 +462,7 @@ photo_2
 	BYTE %00000000
 
 	align $100
-photo_3
+photo_3:
 	BYTE %00000000
 	BYTE %00000000
 	BYTE %00000000
@@ -491,7 +542,7 @@ photo_3
 	BYTE %00000000
 
 	align $100
-photo_4
+photo_4:
 	BYTE %00000000
 	BYTE %00000000
 	BYTE %00000000
@@ -571,7 +622,7 @@ photo_4
 	BYTE %00000000
 
 	align $100
-photo_5
+photo_5:
 	BYTE %00000000
 	BYTE %01111111
 	BYTE %01111111
@@ -650,11 +701,94 @@ photo_5
 	BYTE %11111111
 	BYTE %00000000
 
+;---Lookie Loos Graphics Data from PlayerPal 2600--- - https://alienbill.com/2600/playerpalnext.html
 
+llNeutral:
+        .byte #%00000000;--
+        .byte #%00111100;--
+        .byte #%00000000;--
+        .byte #%00011000;--
+        .byte #%00000000;--
+        .byte #%11101110;--
+        .byte #%10101010;--
+        .byte #%11101110;--
+llUp:
+        .byte #%00000000;--
+        .byte #%00111100;--
+        .byte #%00000000;--
+        .byte #%00011000;--
+        .byte #%00000000;--
+        .byte #%11101110;--
+        .byte #%10101010;--
+        .byte #%10101010;--
+llUpRight:
+        .byte #%00000000;--
+        .byte #%00111100;--
+        .byte #%00000000;--
+        .byte #%00011000;--
+        .byte #%00000000;--
+        .byte #%11101110;--
+        .byte #%10101010;--
+        .byte #%11001100;--
+llRight:
+        .byte #%00000000;--
+        .byte #%00111100;--
+        .byte #%00000000;--
+        .byte #%00011000;--
+        .byte #%00000000;--
+        .byte #%11101110;--
+        .byte #%10001000;--
+        .byte #%11101110;--
+llDownRight:
+        .byte #%00000000;--
+        .byte #%00111100;--
+        .byte #%00000000;--
+        .byte #%00011000;--
+        .byte #%00000000;--
+        .byte #%11001100;--
+        .byte #%10101010;--
+        .byte #%11101110;--
+llDown:
+        .byte #%00000000;--
+        .byte #%00111100;--
+        .byte #%00000000;--
+        .byte #%00011000;--
+        .byte #%00000000;--
+        .byte #%10101010;--
+        .byte #%10101010;--
+        .byte #%11101110;--
+llDownLeft:
+        .byte #%00000000;--
+        .byte #%00111100;--
+        .byte #%00000000;--
+        .byte #%00011000;--
+        .byte #%00000000;--
+        .byte #%01100110;--
+        .byte #%10101010;--
+        .byte #%11101110;--
+llLeft:
+        .byte #%00000000;--
+        .byte #%00111100;--
+        .byte #%00000000;--
+        .byte #%00011000;--
+        .byte #%00000000;--
+        .byte #%11101110;--
+        .byte #%00100010;--
+        .byte #%11101110;--
+llUpLeft:
+        .byte #%00000000;--
+        .byte #%00111100;--
+        .byte #%00000000;--
+        .byte #%00011000;--
+        .byte #%00000000;--
+        .byte #%11101110;--
+        .byte #%10101010;--
+        .byte #%01100110;--
+;---End Lookie Loos Graphics Data---
 
 
 	align 100
-PFData0
+pfData0:
         .byte #%11110000
         .byte #%11110000
         .byte #%11110000
@@ -663,7 +797,7 @@ PFData0
         .byte #%11110000
         .byte #%11110000
         .byte #%11110000
-PFData1
+pfData1:
         .byte #%11111111
         .byte #%11111111
         .byte #%11111111
@@ -672,7 +806,7 @@ PFData1
         .byte #%11111111
         .byte #%11111111
         .byte #%11111111
-PFData2
+pfData2:
         .byte #%11111111
         .byte #%11111111
         .byte #%11111111
@@ -681,11 +815,9 @@ PFData2
         .byte #%11111111
         .byte #%11111111
         .byte #%11111111
-
 
 	ORG $FFFA
-
-InterruptVectors:
-	.word Reset          ; NMI
-	.word Reset          ; RESET
-	.word Reset          ; IRQ
+interruptVectors:
+	.word reset          ; NMI
+	.word reset          ; RESET
+	.word reset          ; IRQ
