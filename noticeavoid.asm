@@ -7,11 +7,14 @@
 ;------------------------------------------------
     seg.u	vars		; uninitialized segment
     org	$80             ; origin set at base of ram
-temp1	ds 1 ; temporary variable
-loopCount ds 1; a better name
-XPos .byte
-YPos .byte
 
+; for the photo
+photoTemp	        ds 1 ; temporary variable
+photoLines          ds 1; a better name
+; for the joysticks
+XPos                ds 0
+YPos                ds 0
+; for the Lookie Loos Animation
 spriteYPosition		ds 1	; 192 is at the top of the screen, the constant VALUE_OF_Y_AT_SCREEN_BOTTOM gives us the bottom.
 currentSpriteLine	ds 1	; (0 &lt;= currentSpriteLine &lt; SPRITE_HEIGHT) for each frame
 hPosition			ds 1
@@ -27,9 +30,12 @@ faceDuration		ds 1
 ;------------------------------------------------
 ; Constants - some made at https://alienbill.com/2600/playerpalnext.html
 ;------------------------------------------------
-
-; Modify values to suit style
-;
+; for the photo
+THREE_COPIES  = %011        ; draw three copies of the sprite for the photo
+; for the streets
+PFFG = $0F                  ; the streets are a concrete jungle
+PFBG = $00                  ; everything else is a shadow
+; for the Lookie Loos
 FACE_DURATION = 4			; Number of frames each face lasts on screen. Decrease to speed up, increase to slow down.
 SLO_MO_FACE_DURATION = 30	; Same as above, applicable when "slo-mo" is activated (i.e. player holds fire button).
 SPRITE_HEIGHT = 8			; Native number of pixels tall the sprite is (before being stretched by a 2LK or whatever).
@@ -40,9 +46,7 @@ SPRITE_WIDTH = 1			; set to 1, 2, or 4, anything else is right out
 BG_COLOR = $00				; background color
 VALUE_OF_Y_AT_SCREEN_BOTTOM = 192-192/X_LK
 VERTICAL_CENTER_OF_SCREEN = 192-(192-VALUE_OF_Y_AT_SCREEN_BOTTOM)/2
-THREE_COPIES    equ %011
-PFFG	equ $0F
-PFBG	equ $00
+
 
 ;------------------------------------------------
 ; Macros (hey, my first macros!) - made at https://alienbill.com/2600/playerpalnext.html
@@ -88,13 +92,14 @@ naFrame: ; draw one Notice Avoid Frame
 ; now wait the overscan
     TIMER_SETUP 30
     TIMER_WAIT
+    jsr readJoysticks
     jmp naFrame
 
 
 
 photoDraw:
     lda #75
-    sta loopCount	; scanline counter
+    sta photoLines	; scanline counter
     lda #$00
     sta COLUBK	; background color
     lda #$0E
@@ -123,7 +128,7 @@ photoDraw:
     SLEEP 40
 ; dump out our player photo
 photoLoop:
-    ldy loopCount                   ; 3     (3) 
+    ldy photoLines                  ; 3     (3) 
     lda photo_0,y                   ; 4     (7)
     sta GRP0                        ; 3     (10) 0 -> [GRP0]
     lda photo_1,y                   ; 4     (14)
@@ -132,15 +137,15 @@ photoLoop:
     lda photo_2,y                   ; 4     (24)
     sta GRP0                        ; 3     (27*) 2 -> [GRP0] ; 1 -> GRP1
     lda photo_5,y                   ; 4     (31) 4 -> X
-    sta temp1                       ; 3     (34)
+    sta photoTemp                   ; 3     (34)
     ldx photo_4,y                   ; 4     (36)
     lda photo_3,y                   ; 4     (40) 3 -> A
-    ldy temp1                       ; 3     (43) 5 -> Y
+    ldy photoTemp                   ; 3     (43) 5 -> Y
     sta GRP1                        ; 3     (46) 3 -> [GRP1] ; 2 -> GRP0
     stx GRP0                        ; 3     (49) 4 -> [GRP0] ; 3 -> GRP1
     sty GRP1                        ; 3     (52) 5 -> [GRP1] ; 4 -> GRP0
     sta GRP0                        ; 3     (55) 5 -> GRP1 
-    dec loopCount                   ; 5     (60)
+    dec photoLines                  ; 5     (60)
     bpl photoLoop                   ; 3     (63)
     rts
 
@@ -181,7 +186,7 @@ streetsInner:
 tempLoosDraw:
     rts
 
-moveJoystick:
+readJoysticks:
 ; Move vertically
 ; (up and down are actually reversed since ypos starts at bottom)
     ldx YPos
