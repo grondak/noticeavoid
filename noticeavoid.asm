@@ -37,6 +37,7 @@ PFFG = $0F                  ; the streets are a concrete jungle
 PFBG = $00                  ; everything else is a shadow
 ; for the Lookie Loos
 FACE_DURATION = 4			; Number of frames each face lasts on screen. Decrease to speed up, increase to slow down.
+FACE_COLOR = $0F            ; bright white
 SLO_MO_FACE_DURATION = 30	; Same as above, applicable when "slo-mo" is activated (i.e. player holds fire button).
 SPRITE_HEIGHT = 8			; Native number of pixels tall the sprite is (before being stretched by a 2LK or whatever).
 NUM_ANIMATION_FACES = 9		; Number of faces of animation. (!)Corresponds with number of color tables(!)
