@@ -1,6 +1,6 @@
     processor 6502          ; Notice Avoid https://github.com/grondak/noticeavoid
-    include	 "vcs.h"
-    include  "macro.h"
+    include "vcs.h"
+    include "macro.h"
     include "xmacro.h"
 ;------------------------------------------------
 ; Variables - some made at https://alienbill.com/2600/playerpalnext.html
@@ -9,29 +9,24 @@
     org	$80             ; origin set at base of ram
 
 ; for the photo
-photoTemp	        ds 1 ; temporary variable
+photoTemp           ds 1 ; temporary variable
 photoLines          ds 1; a better name
-; for the joysticks
-XPos                ds 0
-YPos                ds 0
 ; for the Lookie Loos Animation
 tempX               ds 1
-tempY               ds 1
-spriteYPosition		ds 1	; 192 is at the top of the screen, the constant VALUE_OF_Y_AT_SCREEN_BOTTOM gives us the bottom.
-currentSpriteLine	ds 1	; (0 &lt;= currentSpriteLine &lt; SPRITE_HEIGHT) for each frame
-hPosition			ds 1
-hPositionFrac		ds 1
-playerBuffer		ds 1
-spriteMoving		ds 1	; Boolean. We use this to see if we stopped moving
-animFrameLineCtr	ds 1
-spriteLineColor		ds 1
-hPositionIndex		ds 1
+spriteYPosition     ds 1	; 192 is at the top of the screen, the constant VALUE_OF_Y_AT_SCREEN_BOTTOM gives us the bottom.
+currentSpriteLine   ds 1	; (0 &lt;= currentSpriteLine &lt; SPRITE_HEIGHT) for each frame
+hPosition           ds 1
+playerBuffer        ds 1
+spriteMoving        ds 1	; Boolean. We use this to see if we stopped moving
+animFrameLineCtr    ds 1
+spriteLineColor     ds 1
+hPositionIndex      ds 1
 
 ;------------------------------------------------
 ; Constants - some made at https://alienbill.com/2600/playerpalnext.html
 ;------------------------------------------------
 ; for the photo
-THREE_COPIES  = %011        ; draw three copies of the sprite for the photo
+THREE_COPIES = %011        ; draw three copies of the sprite for the photo
 ; for the streets
 PFFG = $0F                  ; the streets are a concrete jungle
 PFBG = $00                  ; everything else is a shadow
@@ -79,7 +74,7 @@ VERTICAL_CENTER_OF_SCREEN = 192-(192-VALUE_OF_Y_AT_SCREEN_BOTTOM)/2
 reset:	
     CLEAN_START
     lda #80
-	sta hPositionIndex	; initial x pos for temp lookie loo
+    sta hPositionIndex	; initial x pos for temp lookie loo
     lda #28
     sta spriteYPosition	; initial y pos for temp lookie loo
 
@@ -94,13 +89,14 @@ naFrame:
     jsr photoDraw 
 ; skip 19 more lines for positioning
     TIMER_SETUP 19 ; 19 lines total 154
+    ; set up the Lookie Loos (1x)
+    jsr tempLoosSetup ; 3 lines inside a wait so this doesn't change the total
     TIMER_WAIT
-; set up the Lookie Loos (1x)
-    jsr tempLoosSetup ; 2 line total 156
+
     jsr streetsDraw ; draw the streets one line at a time
-                    ; 56 lines total 212
+                    ; 56 lines total 210
 ; now wait the rest of the screen
-    TIMER_SETUP 20 ; 20 lines total 232
+    TIMER_SETUP 22 ; 22 lines total 232
     TIMER_WAIT
 ; now wait the overscan
     TIMER_SETUP 30 ; 30 lines total 262
@@ -201,84 +197,85 @@ streetsDone:
 
 ; prepare to draw a LookieLoo
 tempLoosSetup:
-	lda #$25
-	sta COLUP0
+    lda #$25
+    sta COLUP0
     sta spriteLineColor
-	lda #0					; set to single
+    lda #0					; set to single
     sta NUSIZ0
     sta VDELP0
     sta VDELP1
 
-	ldx hPositionIndex		;3	|
-	lda hPositionTable,x	;4	|
-	sta hPosition			;3	| hPosition = hPositionTable[hPositionIndex]
-	and #$0F				;2	|
-	tax						;2	| x = (hPosition & $0F) (coarse position)
+    ldx hPositionIndex		;3	|
+    lda hPositionTable,x	;4	|
+    sta hPosition			;3	| hPosition = hPositionTable[hPositionIndex]
+    and #$0F				;2	|
+    tax						;2	| x = (hPosition & $0F) (coarse position)
     sta WSYNC
 position:
-	dex						;2	| Position Sprite Horizontally (coarse adj.)
-	bne position			;2+	|
+    dex						;2	| Position Sprite Horizontally (coarse adj.)
+    bne position			;2+	|
 
-	sta RESP0				;3	|
-    ;sta WSYNC
+    sta RESP0				;3	|
+    sta WSYNC
 
     lda hPosition			;3	|
-	and #$F0				;2	| clear coarse nybble
-	sta HMP0
+    and #$F0				;2	| clear coarse nybble
+    sta HMP0
     sta WSYNC
+
     sta HMOVE
     lda #0
     sta spriteMoving        ; override sprite moving
-	lda spriteMoving
-	bne spriteManMoving		;	if (spriteMoving != false) goto SpriteManMoving
+    lda spriteMoving
+    bne spriteManMoving		;	if (spriteMoving != false) goto SpriteManMoving
 
-	lda #SPRITE_HEIGHT-1	;	// Sprite is idle
-	sta animFrameLineCtr	;	animFrameLineCtr = SPRITE_HEIGHT - 1
-	jmp endAnimationChecks	;	goto EndAnimationChecks
+    lda #SPRITE_HEIGHT-1	;	// Sprite is idle
+    sta animFrameLineCtr	;	animFrameLineCtr = SPRITE_HEIGHT - 1
+    jmp endAnimationChecks	;	goto EndAnimationChecks
 
 spriteManMoving:			
-	lda animFrameLineCtr	; Sprite is moving
-	cmp #SPRITE_HEIGHT*#NUM_ANIMATION_FACES
-	bcs resetFace			; if (animFrameLineCtr &gt;= height*numFaces) goto ResetFace
+    lda animFrameLineCtr	; Sprite is moving
+    cmp #SPRITE_HEIGHT*#NUM_ANIMATION_FACES
+    bcs resetFace			; if (animFrameLineCtr &gt;= height*numFaces) goto ResetFace
 
-	jmp endAnimationChecks	; else goto EndAnimationChecks
+    jmp endAnimationChecks	; else goto EndAnimationChecks
 
 resetFace:
-	lda #SPRITE_HEIGHT*#NUM_ANIMATION_FACES-1
-	sta animFrameLineCtr	; animFrameLineCtr = (SPRITE_HEIGHT * NUM_ANIMATION_FACES) - 1
+    lda #SPRITE_HEIGHT*#NUM_ANIMATION_FACES-1
+    sta animFrameLineCtr	; animFrameLineCtr = (SPRITE_HEIGHT * NUM_ANIMATION_FACES) - 1
 endAnimationChecks:
     rts
 
 ; Draw some LookieLoos
 tempLoosDraw:
     	       
-	; Load Player sprite and color. (10~)
-	lda playerBuffer			;2
-	sta GRP0					;3	GRP0 = playerBuffer
-	lda spriteLineColor			;2
-	sta COLUP0					;3	COLUP0 = spriteLineColor
-	; Clear the playerBuffer. (5~)
-	lda #0						;2
-	sta playerBuffer			;3	playerBuffer = 0    	
-	; See if this is the line where we start drawing the sprite. (Y:10~, N:6~)
-	cpy spriteYPosition			;3
-	bne skipActivatePlayer		;2+	if (y != spriteYPosition) goto SkipActivatePlayer
+    ; Load Player sprite and color. (10~)
+    lda playerBuffer			;2
+    sta GRP0					;3	GRP0 = playerBuffer
+    lda spriteLineColor			;2
+    sta COLUP0					;3	COLUP0 = spriteLineColor
+    ; Clear the playerBuffer. (5~)
+    lda #0						;2
+    sta playerBuffer			;3	playerBuffer = 0    	
+    ; See if this is the line where we start drawing the sprite. (Y:10~, N:6~)
+    cpy spriteYPosition			;3
+    bne skipActivatePlayer		;2+	if (y != spriteYPosition) goto SkipActivatePlayer
 
-	lda #SPRITE_HEIGHT-1		;2	else
-	sta currentSpriteLine		;3	currentSpriteLine = SPRITE_HEIGHT-1
+    lda #SPRITE_HEIGHT-1		;2	else
+    sta currentSpriteLine		;3	currentSpriteLine = SPRITE_HEIGHT-1
 skipActivatePlayer:
-	; See if we are drawing sprite data on this line. (Y:5~, N:6~)
-	lda currentSpriteLine		;3
-	bmi endFaceStuff			;2+	if (currentSpriteLine &lt; 0) goto endFaceStuff
+    ; See if we are drawing sprite data on this line. (Y:5~, N:6~)
+    lda currentSpriteLine		;3
+    bmi endFaceStuff			;2+	if (currentSpriteLine &lt; 0) goto endFaceStuff
 
-	; Load sprite graphic and color buffers. (20~)
-	ldx animFrameLineCtr		;3
-	lda llGraphicTable,x	    ;4
-	sta playerBuffer			;3	playerBuffer = SpriteGraphicTable[animFrameLineCtr]
-	; Decrement our counters. (10~)
-	dec currentSpriteLine		;5 currentSpriteLine -= 1
-	dec animFrameLineCtr		;5
-	; Manage the frame delay between face animations. 
+    ; Load sprite graphic and color buffers. (20~)
+    ldx animFrameLineCtr		;3
+    lda llGraphicTable,x	    ;4
+    sta playerBuffer			;3	playerBuffer = SpriteGraphicTable[animFrameLineCtr]
+    ; Decrement our counters. (10~)
+    dec currentSpriteLine		;5 currentSpriteLine -= 1
+    dec animFrameLineCtr		;5
+    ; Manage the frame delay between face animations. 
 endFaceStuff:
     rts
 
@@ -322,612 +319,612 @@ skipMoveRight:
 ; https://www.flickr.com/photos/tokyodrifter/4132540774/in/photolist-7ibmp1-7kwDQr-6drtzM-7i7rqD-fVoZL2-283iFVj-7i7rtP-jYc5Bt-B84WBv-7ibmpY-bZTLow-dEY7Uh-qgio3b-ezNHdC-7i7rrr-7i7TLn-2j4x2vd-nfcDxV-4n8mWY-oMAYTH-dEZXBE-uW2BtA-2i4aDit-nYsFmQ-vo5JMz-5T3mhX-NQZLh3-bBAki7-eZwFDo-cm8FiA-2k3G9o1-qCxgBM-edxNEE-69tfxm-4VoNiK-d3aAQh-oZFiyw-nNrGQY-r63Zzb-BCmnBS-f5sW2P-2d3dWDA-agRe5T-a6uZq8-aNupzD-dRJQVC-6b3nTH-D9as7H-5p8iUR-h1bFAk
     align $100
 photo_0:
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %10000000
-    BYTE %10000000
-    BYTE %10000000
-    BYTE %11000000
-    BYTE %11100000
-    BYTE %11110000
-    BYTE %11111000
-    BYTE %11111110
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %10000000
+    .byte %10000000
+    .byte %10000000
+    .byte %11000000
+    .byte %11100000
+    .byte %11110000
+    .byte %11111000
+    .byte %11111110
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %00000000
 
     align $100
 
 photo_1:
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %10000000
-    BYTE %11100000
-    BYTE %11110000
-    BYTE %11111000
-    BYTE %11111100
-    BYTE %11111100
-    BYTE %11111110
-    BYTE %11111110
-    BYTE %11111110
-    BYTE %11111110
-    BYTE %11111110
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %10000000
+    .byte %11100000
+    .byte %11110000
+    .byte %11111000
+    .byte %11111100
+    .byte %11111100
+    .byte %11111110
+    .byte %11111110
+    .byte %11111110
+    .byte %11111110
+    .byte %11111110
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %00000000
 
     align $100
 photo_2:
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %10000000
-    BYTE %10000000
-    BYTE %10000000
-    BYTE %10001000
-    BYTE %11000001
-    BYTE %11000001
-    BYTE %11000000
-    BYTE %11100001
-    BYTE %11110001
-    BYTE %11100000
-    BYTE %11110000
-    BYTE %11110000
-    BYTE %11110010
-    BYTE %11110000
-    BYTE %11111000
-    BYTE %11111000
-    BYTE %11111000
-    BYTE %11111000
-    BYTE %11111000
-    BYTE %11111100
-    BYTE %11111000
-    BYTE %11111100
-    BYTE %11111101
-    BYTE %11111110
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %10000000
+    .byte %10000000
+    .byte %10000000
+    .byte %10001000
+    .byte %11000001
+    .byte %11000001
+    .byte %11000000
+    .byte %11100001
+    .byte %11110001
+    .byte %11100000
+    .byte %11110000
+    .byte %11110000
+    .byte %11110010
+    .byte %11110000
+    .byte %11111000
+    .byte %11111000
+    .byte %11111000
+    .byte %11111000
+    .byte %11111000
+    .byte %11111100
+    .byte %11111000
+    .byte %11111100
+    .byte %11111101
+    .byte %11111110
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %00000000
 
     align $100
 photo_3:
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00001000
-    BYTE %00001000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000100
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000001
-    BYTE %00000001
-    BYTE %00000001
-    BYTE %00000011
-    BYTE %00000001
-    BYTE %00000001
-    BYTE %00000001
-    BYTE %00000001
-    BYTE %00000001
-    BYTE %00000001
-    BYTE %00000001
-    BYTE %01000001
-    BYTE %00000001
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00001000
-    BYTE %00001000
-    BYTE %00001000
-    BYTE %00000000
-    BYTE %00000110
-    BYTE %00011100
-    BYTE %00110100
-    BYTE %00100100
-    BYTE %00000010
-    BYTE %00000000
-    BYTE %00000010
-    BYTE %00000000
-    BYTE %00000010
-    BYTE %00000000
-    BYTE %00000001
-    BYTE %00000100
-    BYTE %10111000
-    BYTE %00100000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %11000000
-    BYTE %11000000
-    BYTE %11100000
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00001000
+    .byte %00001000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000100
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000001
+    .byte %00000001
+    .byte %00000001
+    .byte %00000011
+    .byte %00000001
+    .byte %00000001
+    .byte %00000001
+    .byte %00000001
+    .byte %00000001
+    .byte %00000001
+    .byte %00000001
+    .byte %01000001
+    .byte %00000001
+    .byte %00000000
+    .byte %00000000
+    .byte %00001000
+    .byte %00001000
+    .byte %00001000
+    .byte %00000000
+    .byte %00000110
+    .byte %00011100
+    .byte %00110100
+    .byte %00100100
+    .byte %00000010
+    .byte %00000000
+    .byte %00000010
+    .byte %00000000
+    .byte %00000010
+    .byte %00000000
+    .byte %00000001
+    .byte %00000100
+    .byte %10111000
+    .byte %00100000
+    .byte %00000000
+    .byte %00000000
+    .byte %11000000
+    .byte %11000000
+    .byte %11100000
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %00000000
 
     align $100
 photo_4:
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00100000
-    BYTE %11110000
-    BYTE %11110000
-    BYTE %11111000
-    BYTE %11111000
-    BYTE %11111000
-    BYTE %11110000
-    BYTE %11000100
-    BYTE %11111100
-    BYTE %11111100
-    BYTE %11111110
-    BYTE %11111010
-    BYTE %11111110
-    BYTE %11111110
-    BYTE %11111110
-    BYTE %11111110
-    BYTE %11111110
-    BYTE %11111110
-    BYTE %11100110
-    BYTE %01100111
-    BYTE %01100011
-    BYTE %00010011
-    BYTE %00110111
-    BYTE %00111111
-    BYTE %00111111
-    BYTE %00111111
-    BYTE %00111111
-    BYTE %00011111
-    BYTE %00011110
-    BYTE %00011100
-    BYTE %00001000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000000
-    BYTE %00000011
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00100000
+    .byte %11110000
+    .byte %11110000
+    .byte %11111000
+    .byte %11111000
+    .byte %11111000
+    .byte %11110000
+    .byte %11000100
+    .byte %11111100
+    .byte %11111100
+    .byte %11111110
+    .byte %11111010
+    .byte %11111110
+    .byte %11111110
+    .byte %11111110
+    .byte %11111110
+    .byte %11111110
+    .byte %11111110
+    .byte %11100110
+    .byte %01100111
+    .byte %01100011
+    .byte %00010011
+    .byte %00110111
+    .byte %00111111
+    .byte %00111111
+    .byte %00111111
+    .byte %00111111
+    .byte %00011111
+    .byte %00011110
+    .byte %00011100
+    .byte %00001000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000000
+    .byte %00000011
+    .byte %11111111
+    .byte %11111111
+    .byte %00000000
 
     align $100
 photo_5:
-    BYTE %00000000
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %01111111
-    BYTE %00111111
-    BYTE %00111111
-    BYTE %00111111
-    BYTE %00111111
-    BYTE %00111111
-    BYTE %00111111
-    BYTE %00111111
-    BYTE %00011111
-    BYTE %00011111
-    BYTE %00011111
-    BYTE %00011111
-    BYTE %00011111
-    BYTE %00011111
-    BYTE %00011111
-    BYTE %00011111
-    BYTE %00011111
-    BYTE %00001111
-    BYTE %00001111
-    BYTE %00001111
-    BYTE %00001111
-    BYTE %00001111
-    BYTE %00001111
-    BYTE %00001111
-    BYTE %00001111
-    BYTE %00001111
-    BYTE %00001111
-    BYTE %00001111
-    BYTE %10001111
-    BYTE %10001111
-    BYTE %10001111
-    BYTE %10001111
-    BYTE %10001111
-    BYTE %10001111
-    BYTE %10001111
-    BYTE %10001111
-    BYTE %10001111
-    BYTE %00001111
-    BYTE %00001111
-    BYTE %00001111
-    BYTE %00001111
-    BYTE %00001111
-    BYTE %00011111
-    BYTE %00011111
-    BYTE %00011111
-    BYTE %00011111
-    BYTE %00111111
-    BYTE %00111111
-    BYTE %01111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %11111111
-    BYTE %00000000
+    .byte %00000000
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %01111111
+    .byte %00111111
+    .byte %00111111
+    .byte %00111111
+    .byte %00111111
+    .byte %00111111
+    .byte %00111111
+    .byte %00111111
+    .byte %00011111
+    .byte %00011111
+    .byte %00011111
+    .byte %00011111
+    .byte %00011111
+    .byte %00011111
+    .byte %00011111
+    .byte %00011111
+    .byte %00011111
+    .byte %00001111
+    .byte %00001111
+    .byte %00001111
+    .byte %00001111
+    .byte %00001111
+    .byte %00001111
+    .byte %00001111
+    .byte %00001111
+    .byte %00001111
+    .byte %00001111
+    .byte %00001111
+    .byte %10001111
+    .byte %10001111
+    .byte %10001111
+    .byte %10001111
+    .byte %10001111
+    .byte %10001111
+    .byte %10001111
+    .byte %10001111
+    .byte %10001111
+    .byte %00001111
+    .byte %00001111
+    .byte %00001111
+    .byte %00001111
+    .byte %00001111
+    .byte %00011111
+    .byte %00011111
+    .byte %00011111
+    .byte %00011111
+    .byte %00111111
+    .byte %00111111
+    .byte %01111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %11111111
+    .byte %00000000
 
 ;---Lookie Loos Graphics Data from PlayerPal 2600--- - https://alienbill.com/2600/playerpalnext.html
 llGraphicTable:
 llNeutral:
-        .byte #%00000000;--
-        .byte #%00111100;--
-        .byte #%00000000;--
-        .byte #%00011000;--
-        .byte #%00000000;--
-        .byte #%11101110;--
-        .byte #%10101010;--
-        .byte #%11101110;--
+    .byte #%00000000;--
+    .byte #%00111100;--
+    .byte #%00000000;--
+    .byte #%00011000;--
+    .byte #%00000000;--
+    .byte #%11101110;--
+    .byte #%10101010;--
+    .byte #%11101110;--
 llUp:
-        .byte #%00000000;--
-        .byte #%00111100;--
-        .byte #%00000000;--
-        .byte #%00011000;--
-        .byte #%00000000;--
-        .byte #%11101110;--
-        .byte #%10101010;--
-        .byte #%10101010;--
+    .byte #%00000000;--
+    .byte #%00111100;--
+    .byte #%00000000;--
+    .byte #%00011000;--
+    .byte #%00000000;--
+    .byte #%11101110;--
+    .byte #%10101010;--
+    .byte #%10101010;--
 llUpRight:
-        .byte #%00000000;--
-        .byte #%00111100;--
-        .byte #%00000000;--
-        .byte #%00011000;--
-        .byte #%00000000;--
-        .byte #%11101110;--
-        .byte #%10101010;--
-        .byte #%11001100;--
+    .byte #%00000000;--
+    .byte #%00111100;--
+    .byte #%00000000;--
+    .byte #%00011000;--
+    .byte #%00000000;--
+    .byte #%11101110;--
+    .byte #%10101010;--
+    .byte #%11001100;--
 llRight:
-        .byte #%00000000;--
-        .byte #%00111100;--
-        .byte #%00000000;--
-        .byte #%00011000;--
-        .byte #%00000000;--
-        .byte #%11101110;--
-        .byte #%10001000;--
-        .byte #%11101110;--
+    .byte #%00000000;--
+    .byte #%00111100;--
+    .byte #%00000000;--
+    .byte #%00011000;--
+    .byte #%00000000;--
+    .byte #%11101110;--
+    .byte #%10001000;--
+    .byte #%11101110;--
 llDownRight:
-        .byte #%00000000;--
-        .byte #%00111100;--
-        .byte #%00000000;--
-        .byte #%00011000;--
-        .byte #%00000000;--
-        .byte #%11001100;--
-        .byte #%10101010;--
-        .byte #%11101110;--
+    .byte #%00000000;--
+    .byte #%00111100;--
+    .byte #%00000000;--
+    .byte #%00011000;--
+    .byte #%00000000;--
+    .byte #%11001100;--
+    .byte #%10101010;--
+    .byte #%11101110;--
 llDown:
-        .byte #%00000000;--
-        .byte #%00111100;--
-        .byte #%00000000;--
-        .byte #%00011000;--
-        .byte #%00000000;--
-        .byte #%10101010;--
-        .byte #%10101010;--
-        .byte #%11101110;--
+    .byte #%00000000;--
+    .byte #%00111100;--
+    .byte #%00000000;--
+    .byte #%00011000;--
+    .byte #%00000000;--
+    .byte #%10101010;--
+    .byte #%10101010;--
+    .byte #%11101110;--
 llDownLeft:
-        .byte #%00000000;--
-        .byte #%00111100;--
-        .byte #%00000000;--
-        .byte #%00011000;--
-        .byte #%00000000;--
-        .byte #%01100110;--
-        .byte #%10101010;--
-        .byte #%11101110;--
+    .byte #%00000000;--
+    .byte #%00111100;--
+    .byte #%00000000;--
+    .byte #%00011000;--
+    .byte #%00000000;--
+    .byte #%01100110;--
+    .byte #%10101010;--
+    .byte #%11101110;--
 llLeft:
-        .byte #%00000000;--
-        .byte #%00111100;--
-        .byte #%00000000;--
-        .byte #%00011000;--
-        .byte #%00000000;--
-        .byte #%11101110;--
-        .byte #%00100010;--
-        .byte #%11101110;--
+    .byte #%00000000;--
+    .byte #%00111100;--
+    .byte #%00000000;--
+    .byte #%00011000;--
+    .byte #%00000000;--
+    .byte #%11101110;--
+    .byte #%00100010;--
+    .byte #%11101110;--
 llUpLeft:
-        .byte #%00000000;--
-        .byte #%00111100;--
-        .byte #%00000000;--
-        .byte #%00011000;--
-        .byte #%00000000;--
-        .byte #%11101110;--
-        .byte #%10101010;--
-        .byte #%01100110;--
+    .byte #%00000000;--
+    .byte #%00111100;--
+    .byte #%00000000;--
+    .byte #%00011000;--
+    .byte #%00000000;--
+    .byte #%11101110;--
+    .byte #%10101010;--
+    .byte #%01100110;--
 ;---End Lookie Loos Graphics Data---
 
 
     align 100
 pfData0:
-        .byte #%11110000
-        .byte #%11110000
-        .byte #%11110000
-        .byte #%11110000
-        .byte #%11110000
-        .byte #%11110000
-        .byte #%11110000
-        .byte #%11110000
+    .byte #%11110000
+    .byte #%11110000
+    .byte #%11110000
+    .byte #%11110000
+    .byte #%11110000
+    .byte #%11110000
+    .byte #%11110000
+    .byte #%11110000
 pfData1:
-        .byte #%11111111
-        .byte #%11111111
-        .byte #%11111111
-        .byte #%11111111
-        .byte #%11111111
-        .byte #%11111111
-        .byte #%11111111
-        .byte #%11111111
+    .byte #%11111111
+    .byte #%11111111
+    .byte #%11111111
+    .byte #%11111111
+    .byte #%11111111
+    .byte #%11111111
+    .byte #%11111111
+    .byte #%11111111
 pfData2:
-        .byte #%11111111
-        .byte #%11111111
-        .byte #%11111111
-        .byte #%11111111
-        .byte #%11111111
-        .byte #%11111111
-        .byte #%11111111
-        .byte #%11111111
+    .byte #%11111111
+    .byte #%11111111
+    .byte #%11111111
+    .byte #%11111111
+    .byte #%11111111
+    .byte #%11111111
+    .byte #%11111111
+    .byte #%11111111
 
 hPositionTable
-			.byte 				  $34,$24,$14,$04,$F4,$E4,$D4,$C4,$B4,$A4,$94	; 0-10
-			.byte $75,$65,$55,$45,$35,$25,$15,$05,$F5,$E5,$D5,$C5,$B5,$A5,$95	; 11-25
-			.byte $76,$66,$56,$46,$36,$26,$16,$06,$F6,$E6,$D6,$C6,$B6,$A6,$96	; 26-40
-			.byte $77,$67,$57,$47,$37,$27,$17,$07,$F7,$E7,$D7,$C7,$B7,$A7,$97	; 41-55
-			.byte $78,$68,$58,$48,$38,$28,$18,$08,$F8,$E8,$D8,$C8,$B8,$A8,$98	; 56-70
-			.byte $79,$69,$59,$49,$39,$29,$19,$09,$F9,$E9,$D9,$C9,$B9,$A9,$99	; 71-85
-			.byte $7A,$6A,$5A,$4A,$3A,$2A,$1A,$0A,$FA,$EA,$DA,$CA,$BA,$AA,$9A	; 86-100
-			.byte $7B,$6B,$5B,$4B,$3B,$2B,$1B,$0B,$FB,$EB,$DB,$CB,$BB,$AB,$9B	; 101-115
-			.byte $7C,$6C,$5C,$4C,$3C,$2C,$1C,$0C,$FC,$EC,$DC,$CC,$BC,$AC,$9C	; 116-130
-			.byte $7D,$6D,$5D,$4D,$3D,$2D,$1D,$0D,$FD,$ED,$DD,$CD,$BD,$AD,$9D	; 131-145
-			.byte $7E,$6E,$5E,$4E,$3E,$2E,$1E,$0E,$FE,$EE,$DE,$CE,$BE,$AE		; 146-159
+    .byte 				  $34,$24,$14,$04,$F4,$E4,$D4,$C4,$B4,$A4,$94	; 0-10
+    .byte $75,$65,$55,$45,$35,$25,$15,$05,$F5,$E5,$D5,$C5,$B5,$A5,$95	; 11-25
+    .byte $76,$66,$56,$46,$36,$26,$16,$06,$F6,$E6,$D6,$C6,$B6,$A6,$96	; 26-40
+    .byte $77,$67,$57,$47,$37,$27,$17,$07,$F7,$E7,$D7,$C7,$B7,$A7,$97	; 41-55
+    .byte $78,$68,$58,$48,$38,$28,$18,$08,$F8,$E8,$D8,$C8,$B8,$A8,$98	; 56-70
+    .byte $79,$69,$59,$49,$39,$29,$19,$09,$F9,$E9,$D9,$C9,$B9,$A9,$99	; 71-85
+    .byte $7A,$6A,$5A,$4A,$3A,$2A,$1A,$0A,$FA,$EA,$DA,$CA,$BA,$AA,$9A	; 86-100
+    .byte $7B,$6B,$5B,$4B,$3B,$2B,$1B,$0B,$FB,$EB,$DB,$CB,$BB,$AB,$9B	; 101-115
+    .byte $7C,$6C,$5C,$4C,$3C,$2C,$1C,$0C,$FC,$EC,$DC,$CC,$BC,$AC,$9C	; 116-130
+    .byte $7D,$6D,$5D,$4D,$3D,$2D,$1D,$0D,$FD,$ED,$DD,$CD,$BD,$AD,$9D	; 131-145
+    .byte $7E,$6E,$5E,$4E,$3E,$2E,$1E,$0E,$FE,$EE,$DE,$CE,$BE,$AE		; 146-159
 			
     ORG $FFFA
 interruptVectors:
