@@ -13,14 +13,14 @@ photoTemp           ds 1 ; temporary variable
 photoLines          ds 1; a better name
 ; for the Lookie Loos Animation
 tempX               ds 1
-spriteYPosition     ds 1	; 192 is at the top of the screen, the constant VALUE_OF_Y_AT_SCREEN_BOTTOM gives us the bottom.
-currentSpriteLine   ds 1	; (0 &lt;= currentSpriteLine &lt; SPRITE_HEIGHT) for each frame
-hPosition           ds 1
-playerBuffer        ds 1
-spriteMoving        ds 1	; Boolean. We use this to see if we stopped moving
-animFrameLineCtr    ds 1
-spriteLineColor     ds 1
-hPositionIndex      ds 1
+spriteYPosition1    ds 1	; 192 is at the top of the screen, the constant VALUE_OF_Y_AT_SCREEN_BOTTOM gives us the bottom.
+currentSpriteLine1  ds 1	; (0 &lt;= currentSpriteLine1 &lt; SPRITE_HEIGHT) for each frame
+hPosition1          ds 1
+playerBuffer1       ds 1
+spriteMoving1       ds 1	; Boolean. We use this to see if we stopped moving
+animFrameLineCtr1   ds 1
+spriteLineColor1    ds 1
+hPositionIndex1     ds 1
 
 ;------------------------------------------------
 ; Constants - some made at https://alienbill.com/2600/playerpalnext.html
@@ -53,18 +53,18 @@ VERTICAL_CENTER_OF_SCREEN = 192-(192-VALUE_OF_Y_AT_SCREEN_BOTTOM)/2
     ENDM
     
     MAC UP_DIST_MACRO
-        inc spriteYPosition
-        
+        inc spriteYPosition1
+                
         IF X_LK = 1
-            inc spriteYPosition		; we move a little extra to speed up vertical motion in 1LK
+            inc spriteYPosition1		; we move a little extra to speed up vertical motion in 1LK
         ENDIF
     ENDM
 
     MAC DOWN_DIST_MACRO
-        dec spriteYPosition
+        dec spriteYPosition1
         
         IF X_LK = 1
-            dec spriteYPosition		; we move a little extra to speed up vertical motion in 1LK
+            dec spriteYPosition1		; we move a little extra to speed up vertical motion in 1LK
         ENDIF
     ENDM
 
@@ -74,9 +74,9 @@ VERTICAL_CENTER_OF_SCREEN = 192-(192-VALUE_OF_Y_AT_SCREEN_BOTTOM)/2
 reset:	
     CLEAN_START
     lda #80
-    sta hPositionIndex	; initial x pos for temp lookie loo
+    sta hPositionIndex1	; initial x pos for temp lookie loo
     lda #28
-    sta spriteYPosition	; initial y pos for temp lookie loo
+    sta spriteYPosition1	; initial y pos for temp lookie loo
     lda #PFBG
     sta COLUBK
     lda #PFFG
@@ -205,17 +205,17 @@ streetsDone:
 tempLoosSetup:
     lda #$25
     sta COLUP0
-    sta spriteLineColor
+    sta spriteLineColor1
     lda #0					; set to single
     sta NUSIZ0
     sta VDELP0
     sta VDELP1
 
-    ldx hPositionIndex		;3	|
+    ldx hPositionIndex1		;3	|
     lda hPositionTable,x	;4	|
-    sta hPosition			;3	| hPosition = hPositionTable[hPositionIndex]
+    sta hPosition1			;3	| hPosition1 = hPositionTable[hPositionIndex1]
     and #$0F				;2	|
-    tax						;2	| x = (hPosition & $0F) (coarse position)
+    tax						;2	| x = (hPosition1 & $0F) (coarse position)
     sta WSYNC
 position:
     dex						;2	| Position Sprite Horizontally (coarse adj.)
@@ -224,69 +224,69 @@ position:
     sta RESP0				;3	|
     sta WSYNC
 
-    lda hPosition			;3	|
+    lda hPosition1			;3	|
     and #$F0				;2	| clear coarse nybble
     sta HMP0
     sta WSYNC
 
     sta HMOVE
     lda #0                  ; 0 for no animation, 1 for animation
-    sta spriteMoving        ; override sprite moving
-    lda spriteMoving
-    bne spriteManMoving		;	if (spriteMoving != false) goto SpriteManMoving
+    sta spriteMoving1        ; override sprite moving
+    lda spriteMoving1
+    bne spriteManMoving		;	if (spriteMoving1 != false) goto SpriteManMoving
 
     lda #SPRITE_HEIGHT-1	;	// Sprite is idle
-    sta animFrameLineCtr	;	animFrameLineCtr = SPRITE_HEIGHT - 1
+    sta animFrameLineCtr1	;	animFrameLineCtr1 = SPRITE_HEIGHT - 1
     jmp endAnimationChecks	;	goto EndAnimationChecks
 
 spriteManMoving:			
-    lda animFrameLineCtr	; Sprite is moving
+    lda animFrameLineCtr1	; Sprite is moving
     cmp #SPRITE_HEIGHT*#NUM_ANIMATION_FACES
-    bcs resetFace			; if (animFrameLineCtr &gt;= height*numFaces) goto ResetFace
+    bcs resetFace			; if (animFrameLineCtr1 &gt;= height*numFaces) goto ResetFace
 
     jmp endAnimationChecks	; else goto EndAnimationChecks
 
 resetFace:
     lda #SPRITE_HEIGHT*#NUM_ANIMATION_FACES-1
-    sta animFrameLineCtr	; animFrameLineCtr = (SPRITE_HEIGHT * NUM_ANIMATION_FACES) - 1
+    sta animFrameLineCtr1	; animFrameLineCtr1 = (SPRITE_HEIGHT * NUM_ANIMATION_FACES) - 1
 endAnimationChecks:
     rts
 
 ; Draw some LookieLoos
 tempLoosDraw:
     ; Load Player sprite and color. (10~)
-    lda playerBuffer			;2
-    sta GRP0					;3	GRP0 = playerBuffer
-    lda spriteLineColor			;2
-    sta COLUP0					;3	COLUP0 = spriteLineColor
-    ; Clear the playerBuffer. (5~)
+    lda playerBuffer1			;2
+    sta GRP0					;3	GRP0 = playerBuffer1
+    lda spriteLineColor1			;2
+    sta COLUP0					;3	COLUP0 = spriteLineColor1
+    ; Clear the playerBuffer1. (5~)
     lda #0						;2
-    sta playerBuffer			;3	playerBuffer = 0    	
+    sta playerBuffer1			;3	playerBuffer1 = 0    	
     ; See if this is the line where we start drawing the sprite. (Y:10~, N:6~)
-    cpy spriteYPosition			;3
-    bne skipActivatePlayer		;2+	if (y != spriteYPosition) goto SkipActivatePlayer
+    cpy spriteYPosition1			;3
+    bne skipActivatePlayer		;2+	if (y != spriteYPosition1) goto SkipActivatePlayer
 
     lda #SPRITE_HEIGHT-1		;2	else
-    sta currentSpriteLine		;3	currentSpriteLine = SPRITE_HEIGHT-1
+    sta currentSpriteLine1		;3	currentSpriteLine1 = SPRITE_HEIGHT-1
 skipActivatePlayer:
     ; See if we are drawing sprite data on this line. (Y:5~, N:6~)
-    lda currentSpriteLine		;3
-    bmi endFaceStuff			;2+	if (currentSpriteLine &lt; 0) goto endFaceStuff
+    lda currentSpriteLine1		;3
+    bmi endFaceStuff			;2+	if (currentSpriteLine1 &lt; 0) goto endFaceStuff
 
     ; Load sprite graphic and color buffers. (20~)
-    ldx animFrameLineCtr		;3
+    ldx animFrameLineCtr1		;3
     lda llGraphicTable,x	    ;4
-    sta playerBuffer			;3	playerBuffer = SpriteGraphicTable[animFrameLineCtr]
+    sta playerBuffer1			;3	playerBuffer1 = SpriteGraphicTable[animFrameLineCtr1]
     ; Decrement our counters. (10~)
-    dec currentSpriteLine		;5 currentSpriteLine -= 1
-    dec animFrameLineCtr		;5
+    dec currentSpriteLine1		;5 currentSpriteLine1 -= 1
+    dec animFrameLineCtr1		;5
     ; Manage the frame delay between face animations. 
 endFaceStuff:
     rts
 
 readJoysticks:
 ; Move vertically
-    ldx spriteYPosition
+    ldx spriteYPosition1
     lda #%00100000	;Down?
     bit SWCHA
     bne skipMoveDown
@@ -301,9 +301,9 @@ skipMoveDown:
     bcs skipMoveUp
     inx
 skipMoveUp:
-    stx spriteYPosition
+    stx spriteYPosition1
 ; Move horizontally
-    ldx hPositionIndex
+    ldx hPositionIndex1
     lda #%01000000	;Left?
     bit SWCHA
     bne skipMoveLeft
@@ -318,7 +318,7 @@ skipMoveLeft:
     bcs skipMoveRight
     inx
 skipMoveRight:
-    stx hPositionIndex
+    stx hPositionIndex1
     rts
 
 ; https://www.flickr.com/photos/tokyodrifter/4132540774/in/photolist-7ibmp1-7kwDQr-6drtzM-7i7rqD-fVoZL2-283iFVj-7i7rtP-jYc5Bt-B84WBv-7ibmpY-bZTLow-dEY7Uh-qgio3b-ezNHdC-7i7rrr-7i7TLn-2j4x2vd-nfcDxV-4n8mWY-oMAYTH-dEZXBE-uW2BtA-2i4aDit-nYsFmQ-vo5JMz-5T3mhX-NQZLh3-bBAki7-eZwFDo-cm8FiA-2k3G9o1-qCxgBM-edxNEE-69tfxm-4VoNiK-d3aAQh-oZFiyw-nNrGQY-r63Zzb-BCmnBS-f5sW2P-2d3dWDA-agRe5T-a6uZq8-aNupzD-dRJQVC-6b3nTH-D9as7H-5p8iUR-h1bFAk
