@@ -77,19 +77,26 @@ reset:
     sta hPositionIndex	; initial x pos for temp lookie loo
     lda #28
     sta spriteYPosition	; initial y pos for temp lookie loo
-
+    lda #PFBG
+    sta COLUBK
+    lda #PFFG
+    sta COLUPF
  ; draw one Notice Avoid Frame - 2 line kernel
 naFrame:
     VERTICAL_SYNC  ;3 lines total 3
+    lda #0
+    sta VSYNC		; turn off VSYNC by clearing it
+    sta VBLANK      ; that too
+
     TIMER_SETUP 37 ; V-Blank 37 lines total 40
     TIMER_WAIT ;the V-Blank wait
-    ; skip 20 lines for positioning
+; skip 20 lines for positioning
     TIMER_SETUP 20 ; 20 lines total 60   
 ; draw the photo first ; 75 lines total 135
     jsr photoDraw 
 ; skip 19 more lines for positioning
     TIMER_SETUP 19 ; 19 lines total 154
-    ; set up the Lookie Loos (1x)
+; set up the Lookie Loos (1x)
     jsr tempLoosSetup ; 3 lines inside a wait so this doesn't change the total
     TIMER_WAIT
 
@@ -99,9 +106,11 @@ naFrame:
     TIMER_SETUP 22 ; 22 lines total 232
     TIMER_WAIT
 ; now wait the overscan
+    lda #%00000010				;2
+    sta VBLANK           		;3 end of screen - enter blanking
     TIMER_SETUP 30 ; 30 lines total 262
-    TIMER_WAIT
     jsr readJoysticks
+    TIMER_WAIT
     jmp naFrame
 
 
@@ -113,7 +122,7 @@ photoDraw:
     sta COLUBK	; background color
     lda #PFFG
     sta COLUP0	; show how players alternate
-    lda #$0E
+    lda #PFFG
     sta COLUP1	; by having different colors
     lda #THREE_COPIES
     sta NUSIZ0
@@ -163,18 +172,15 @@ photoLoop:
 streetsDraw:
     ldy #28     ; 56 total playfield lines because this is a 2-line kernel
     ldx #7      ; groups of 8 playfield lines
-    lda #PFBG
-    sta COLUBK
-    lda #PFFG
-    sta COLUPF
+    sta WSYNC   ; set the first playfield data writes up on a horizontal sync
 streetsInner:
-    sta WSYNC
     lda pfData0,x
     sta PF0		; set the PF1 playfield pattern register
     lda pfData1,x
     sta PF1		; set the PF1 playfield pattern register
     lda pfData2,x
     sta PF2		; set the PF2 playfield pattern register
+    sta WSYNC   ; cause remaining activity to start on a horizontal sync
     stx tempX
     jsr tempLoosDraw
     ldx tempX
@@ -224,7 +230,7 @@ position:
     sta WSYNC
 
     sta HMOVE
-    lda #0
+    lda #0                  ; 0 for no animation, 1 for animation
     sta spriteMoving        ; override sprite moving
     lda spriteMoving
     bne spriteManMoving		;	if (spriteMoving != false) goto SpriteManMoving
@@ -248,7 +254,6 @@ endAnimationChecks:
 
 ; Draw some LookieLoos
 tempLoosDraw:
-    	       
     ; Load Player sprite and color. (10~)
     lda playerBuffer			;2
     sta GRP0					;3	GRP0 = playerBuffer
