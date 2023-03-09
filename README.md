@@ -61,12 +61,15 @@ Have a good time. If this game helps you understand others, then it is a wild su
   * Lookie-Loos
 * Background: just black
 * Playfield: shows where you are on your journey to experience social anxiety and try to help Chad.
+* Audio Channel 0: Some beats, yo
+* Audio Channel 1: Anxiety Static
 
 #### The Game field is drawn:
-1. Score
-2. Your picture
-3. Playfield
-4. Your dot, Lookie-Loos, their eyelines.
+1. Play music & static; determine Lookie-loos strategy
+2. Score
+3. Your picture
+4. Playfield
+5. Your dot, Lookie-Loos, their eyelines.
 
 #### Features:
 * joystick movement input: moving the ball, which represents you
@@ -80,20 +83,20 @@ Have a good time. If this game helps you understand others, then it is a wild su
 
 
 ## Updates
-  3/4/2023: Adding some few initial files with some sample/test code
-  3/6/2023: Added one lookie loo on top of playfield
-  3/7/2023: Fixed a minor timing issue for the lookie loo versus the playfield
-  3/8/2023: Added credits section to README.md
+  3/4/2023: Adding some few initial files with some sample/test code  
+  3/6/2023: Added one lookie loo on top of playfield  
+  3/7/2023: Fixed a minor timing issue for the lookie loo versus the playfield  
+  3/8/2023: Added credits section to README.md  
 
 
 ## Credits:
-These sites encourage coders to learn and use their works. I appreciate the boosts and want to give back. Please use their ideas and tools. There would be no Notice Avoid without these contributions.
-8Blit for his [awesome efforts](https://www.8blit.com/) and his [awesome Github site](https://github.com/kreiach/).
-8bitworkshop for their [site](https://8bitworkshop.com/) and Javascript CRT Probe debugger
-alienbill for their [2600 programming site and tooling](https://alienbill.com/2600/)
-[DASM 6502 assember](https://dasm-assembler.github.io/)
-[Stella Manual](http://atarihq.com/danb/files/stella.pdf)
-Chunkypixel's Atari Dev Studio [tooling in Visual Studio Code](https://github.com/chunkypixel/atari-dev-studio)
+These sites encourage coders to learn and use their works. I appreciate the boosts and want to give back. Please use their ideas and tools. There would be no Notice Avoid without these contributions.  
+8Blit for his [awesome efforts](https://www.8blit.com/) and his [awesome Github site](https://github.com/kreiach/).  
+8bitworkshop for their [site](https://8bitworkshop.com/) and Javascript CRT Probe debugger  
+alienbill for their [2600 programming site and tooling](https://alienbill.com/2600/)  
+[DASM 6502 assember](https://dasm-assembler.github.io/)  
+[Stella Manual](http://atarihq.com/danb/files/stella.pdf)  
+Chunkypixel's Atari Dev Studio [tooling in Visual Studio Code](https://github.com/chunkypixel/atari-dev-studio)  
 
 ## Bio:
   Tony Reynolds got his Atari VCS in 1977. With his family, they had lots of cool games. Just now found the right game to write for the 2600.
