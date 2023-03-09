@@ -86,7 +86,7 @@ Have a good time. If this game helps you understand others, then it is a wild su
   3/4/2023: Adding some few initial files with some sample/test code  
   3/6/2023: Added one lookie loo on top of playfield  
   3/7/2023: Fixed a minor timing issue for the lookie loo versus the playfield  
-  3/8/2023: Added credits section to README.md  
+  3/8/2023: Added credits section to README.md and added 2nd lookie loo. fixed CRT Probe timing errors  
 
 
 ## Credits:
