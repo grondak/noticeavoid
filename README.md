@@ -1,5 +1,5 @@
 # Notice Avoid
-An Atari 2600 game to help people understand social anxiety
+An Atari 2600 game to help people understand social anxiety.
 
 # Ever want to help on a real 2600 game?
 I have wanted to make a game for the 2600 for a very long time. I finally found the right idea.  Notice Avoid is a game that lets you take a Gemba Walk in the shoes of someone with social anxiety.
@@ -86,12 +86,12 @@ Have a good time. If this game helps you understand others, then it is a wild su
   3/4/2023: Adding some few initial files with some sample/test code  
   3/6/2023: Added one lookie loo on top of playfield  
   3/7/2023: Fixed a minor timing issue for the lookie loo versus the playfield  
-  3/8/2023: Added credits section to README.md and added 2nd lookie loo. fixed CRT Probe timing errors  
+  3/8/2023: Added credits section to README.md and added 2nd lookie loo. Fixed CRT Probe timing errors  
 
 
 ## Credits:
 These sites encourage coders to learn and use their works. I appreciate the boosts and want to give back. Please use their ideas and tools. There would be no Notice Avoid without these contributions.  
-8Blit for his [awesome efforts](https://www.8blit.com/) and his [awesome Github site](https://github.com/kreiach/).  
+8Blit for his [awesome efforts](https://www.8blit.com/) and his [awesome Github site](https://github.com/kreiach/).  I'm a Patreon patron- you should check this out immediately!
 8bitworkshop for their [site](https://8bitworkshop.com/) and Javascript CRT Probe debugger  
 alienbill for their [2600 programming site and tooling](https://alienbill.com/2600/)  
 [DASM 6502 assember](https://dasm-assembler.github.io/)  
