@@ -91,7 +91,7 @@ Have a good time. If this game helps you understand others, then it is a wild su
 
 ## Credits:
 These sites encourage coders to learn and use their works. I appreciate the boosts and want to give back. Please use their ideas and tools. There would be no Notice Avoid without these contributions.  
-8Blit for his [awesome efforts](https://www.8blit.com/) and his [awesome Github site](https://github.com/kreiach/).  I'm a Patreon patron- you should check this out immediately!
+8Blit for his [awesome efforts](https://www.8blit.com/) and his [awesome Github site](https://github.com/kreiach/).  I'm a Patreon patron- you should check this out immediately!  
 8bitworkshop for their [site](https://8bitworkshop.com/) and Javascript CRT Probe debugger  
 alienbill for their [2600 programming site and tooling](https://alienbill.com/2600/)  
 [DASM 6502 assember](https://dasm-assembler.github.io/)  
