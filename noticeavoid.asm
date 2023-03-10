@@ -31,6 +31,10 @@ spriteMoving1       ds 1	; Boolean. We use this to see if we stopped moving
 animFrameLineCtr1   ds 1
 spriteLineColor1    ds 1
 hPositionIndex1     ds 1
+ballYPosition       ds 1
+ballHPosition       ds 1
+ballHPositionIndex  ds 1
+ballColor           ds 1
 
 ;------------------------------------------------
 ; Constants - some made at https://alienbill.com/2600/playerpalnext.html
@@ -52,6 +56,8 @@ VALUE_OF_Y_AT_SCREEN_BOTTOM = 192-192/X_LK
 VERTICAL_CENTER_OF_SCREEN = 192-(192-VALUE_OF_Y_AT_SCREEN_BOTTOM)/2
 LOO_DIRECTION_0 = %00000001
 LOO_DIRECTION_1 = %00000010
+ballStartingYPosition = 15
+ballStartingHPosition = 15
 
 
 ;------------------------------------------------
@@ -91,17 +97,24 @@ reset:
     sta spriteYPosition0	; initial y pos for loo0
     lda #LOO_DIRECTION_0
     sta looDirection0       ; initial direction for loo0
-
     lda #20
     sta hPositionIndex1	; initial x pos for loo0
     lda #14
     sta spriteYPosition1	; initial y pos for loo0
     lda #LOO_DIRECTION_1
     sta looDirection1       ; initial direction for loo0
+    lda #ballStartingYPosition
+    sta ballYPosition
+    lda ballStartingHPosition
+    sta ballHPositionIndex
     lda #PFBG
     sta COLUBK
     lda #PFFG
     sta COLUPF
+    lda #1
+    sta CTRLPF
+    lda #2
+    sta ENABL
  ; draw one Notice Avoid Frame - 2 line kernel
 naFrame:
     VERTICAL_SYNC  ;3 lines total 3
@@ -118,11 +131,12 @@ naFrame:
 ; draw the photo first ; 75 lines total 135
     jsr photoDraw 
 ; skip 19 more lines for positioning
-    TIMER_SETUP 19 ; 19 lines total 154
+    TIMER_SETUP 17 ; 17 lines total 152
+; set up the player's ball
+    jsr ballSetup
 ; set up the Lookie Loos (1x)
     jsr smartLoosSetup
     TIMER_WAIT
-
     jsr streetsDraw ; draw the streets one line at a time
                     ; 84 lines total 238
 ; now wait the rest of the screen
@@ -195,27 +209,33 @@ photoLoop:
 streetsDraw:
     ldy #28     ; 86 total playfield lines because this is a 3-line kernel
     ldx #7      ; groups of 8 playfield lines
-    sta WSYNC
-streetsInner:
-    lda pfData0,x
+    lda #$FF
     sta PF0		; set the PF1 playfield pattern register
-    lda pfData1,x
     sta PF1		; set the PF1 playfield pattern register
-    lda pfData2,x
-    sta PF2		; set the PF2 playfield pattern register
+    sta PF2		; set he PF2 playfield pattern register
+    lda #0
+    sta WSYNC
+    sta PF0
+    sta PF1
+    sta PF2
+streetsInner:
     stx tempX
     jsr loosDraw0
     jsr loosDraw1
+    jsr ballDraw
     ldx tempX
     dey
     beq streetsDone
-    sta WSYNC
     dex
     bne streetsInner
     ldx #7
     jmp streetsInner
 streetsDone:
 ; clear out the playfield so it doesn't display when we don't want it.
+    lda #$FF
+    sta PF0		; set the PF1 playfield pattern register
+    sta PF1		; set the PF1 playfield pattern register
+    sta PF2		; set he PF2 playfield pattern register
     lda #0
     sta WSYNC
     sta PF0
@@ -362,6 +382,34 @@ skipActivatePlayer1:
 endFaceStuff1:
     rts
 
+ballSetup:
+    lda #%00010000
+    sta CTRLPF
+    ldx ballHPositionIndex  ;3	|
+    lda hPositionTable,x	;4	|
+    sta ballHPosition		;3	| ballHPosition = hPositionTable[ballHPositionIndex]
+    and #$0F				;2	|
+    tax						;2	| x = (hPosition0 & $0F) (coarse position)
+    sta WSYNC
+positionBall:
+    dex						;2	| Position Sprite Horizontally (coarse adj.)
+    bne positionBall		;2+	|
+    sta RESBL
+    lda ballHPosition
+    and #$F0
+    sta HMBL
+    rts
+
+ballDraw:
+    lda #0
+    sta ENABL
+    cpy ballYPosition
+    bne skipBallDraw
+    lda #2
+    sta ENABL
+skipBallDraw:
+    rts
+
 loosMovement0: ; down to right to up to left to....
     lda looDirection0
     cmp #%00000001
@@ -462,7 +510,7 @@ changeToLeft1:
     rts
 moveLeftLoo1:
     ldx hPositionIndex1
-    cpx #1
+    cpx #3
     bcc changeToDown1
     dex
     stx hPositionIndex1
@@ -471,13 +519,16 @@ changeToDown1:
     lda #%00000001
     sta looDirection1
     rts
+
+
+
 readJoysticks:
 ; Move vertically
-    ldx spriteYPosition0
+    ldx ballYPosition
     lda #%00100000	;Down?
     bit SWCHA
     bne skipMoveDown
-    cpx #10
+    cpx #3
     bcc skipMoveDown
     dex
 skipMoveDown:
@@ -488,24 +539,24 @@ skipMoveDown:
     bcs skipMoveUp
     inx
 skipMoveUp:
-    stx spriteYPosition0
+    stx ballYPosition
 ; Move horizontally
-    ldx hPositionIndex0
+    ldx ballHPositionIndex
     lda #%01000000	;Left?
     bit SWCHA
     bne skipMoveLeft
-    cpx #1
+    cpx #2
     bcc skipMoveLeft
     dex
 skipMoveLeft:
     lda #%10000000	;Right?
     bit SWCHA 
     bne skipMoveRight
-    cpx #152
+    cpx #159
     bcs skipMoveRight
     inx
 skipMoveRight:
-    stx hPositionIndex0
+    stx ballHPositionIndex
     rts
 
 ; https://www.flickr.com/photos/tokyodrifter/4132540774/in/photolist-7ibmp1-7kwDQr-6drtzM-7i7rqD-fVoZL2-283iFVj-7i7rtP-jYc5Bt-B84WBv-7ibmpY-bZTLow-dEY7Uh-qgio3b-ezNHdC-7i7rrr-7i7TLn-2j4x2vd-nfcDxV-4n8mWY-oMAYTH-dEZXBE-uW2BtA-2i4aDit-nYsFmQ-vo5JMz-5T3mhX-NQZLh3-bBAki7-eZwFDo-cm8FiA-2k3G9o1-qCxgBM-edxNEE-69tfxm-4VoNiK-d3aAQh-oZFiyw-nNrGQY-r63Zzb-BCmnBS-f5sW2P-2d3dWDA-agRe5T-a6uZq8-aNupzD-dRJQVC-6b3nTH-D9as7H-5p8iUR-h1bFAk
@@ -886,7 +937,7 @@ photo_4:
     .byte %11100110
     .byte %01100111
     .byte %01100011
-    .byte %00010011
+    .byte %00110011
     .byte %00110111
     .byte %00111111
     .byte %00111111
