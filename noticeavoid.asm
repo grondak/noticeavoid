@@ -220,9 +220,68 @@ streetsDraw:
     sta PF2
 streetsInner:
     stx tempX
-    jsr loosDraw0
-    jsr loosDraw1
-    jsr ballDraw
+; Draw loo0
+loosDraw0:
+    ; Load Player sprite and color. (10~)
+    sta WSYNC
+    lda playerBuffer0			;2
+    sta GRP0					;3	GRP0 = playerBuffer0
+    lda spriteLineColor0			;2
+    sta COLUP0					;3	COLUP0 = spriteLineColor0
+    lda playerBuffer1			;2
+    sta GRP1					;3	GRP1 = playerBuffer1
+    lda spriteLineColor1			;2
+    sta COLUP1	
+    ; Clear the playerBuffer0. (5~)
+    lda #0						;2
+    sta playerBuffer0			;3	playerBuffer0 = 0    	        sta playerBuffer1			;3	playerBuffer1 = 0    	
+    ; See if this is the line where we start drawing the sprite. (Y:10~, N:6~)
+    cpy spriteYPosition0			;3
+    bne skipActivateLoo0		;2+	if (y != spriteYPosition0) goto SkipActivatePlayer
+
+    lda #SPRITE_HEIGHT-1		;2	else
+    sta currentSpriteLine0		;3	currentSpriteLine0 = SPRITE_HEIGHT-1
+skipActivateLoo0:
+    ; See if we are drawing sprite data on this line. (Y:5~, N:6~)
+    lda currentSpriteLine0		;3
+    bmi loosDraw1			;2+	if (currentSpriteLine0 &lt; 0) goto endFaceStuff
+
+    ; Load sprite graphic and color buffers. (20~)
+    ldx animFrameLineCtr0		;3
+    lda llGraphicTable,x	    ;4
+    sta playerBuffer0			;3	playerBuffer0 = SpriteGraphicTable[animFrameLineCtr0]
+    ; Decrement our counters. (10~)
+    dec currentSpriteLine0		;5 currentSpriteLine0 -= 1
+    dec animFrameLineCtr0		;5
+loosDraw1:
+    ; Load Player sprite and color. (10~)
+    ; See if this is the line where we start drawing the sprite. (Y:10~, N:6~)
+    cpy spriteYPosition1			;3
+    bne skipActivateLoo1		;2+	if (y != spriteYPosition1) goto SkipActivatePlayer
+
+    lda #SPRITE_HEIGHT-1		;2	else
+    sta currentSpriteLine1		;3	currentSpriteLine1 = SPRITE_HEIGHT-1
+skipActivateLoo1:
+    ; See if we are drawing sprite data on this line. (Y:5~, N:6~)
+    lda currentSpriteLine1		;3
+    bmi ballDraw			;2+	if (currentSpriteLine1 &lt; 0) goto endFaceStuff
+
+    ; Load sprite graphic and color buffers. (20~)
+    ldx animFrameLineCtr1		;3
+    lda llGraphicTable,x	    ;4
+    sta playerBuffer1			;3	playerBuffer1 = SpriteGraphicTable[animFrameLineCtr0]
+    ; Decrement our counters. (10~)
+    dec currentSpriteLine1		;5 currentSpriteLine1 -= 1
+    dec animFrameLineCtr1		;5
+    ; Manage the frame delay between face animations. 
+ballDraw:
+    lda #0
+    sta ENABL
+    cpy ballYPosition
+    bne skipBallDraw
+    lda #2
+    sta ENABL
+skipBallDraw:
     ldx tempX
     dey
     beq streetsDone
@@ -315,72 +374,8 @@ resetFace:
 endAnimationChecks:
     rts
 
-; Draw loo0
-loosDraw0:
-    ; Load Player sprite and color. (10~)
-    sta WSYNC
-    lda playerBuffer0			;2
-    sta GRP0					;3	GRP0 = playerBuffer0
-    lda spriteLineColor0			;2
-    sta COLUP0					;3	COLUP0 = spriteLineColor0
-    ; Clear the playerBuffer0. (5~)
-    lda #0						;2
-    sta playerBuffer0			;3	playerBuffer0 = 0    	
-    ; See if this is the line where we start drawing the sprite. (Y:10~, N:6~)
-    cpy spriteYPosition0			;3
-    bne skipActivatePlayer0		;2+	if (y != spriteYPosition0) goto SkipActivatePlayer
-
-    lda #SPRITE_HEIGHT-1		;2	else
-    sta currentSpriteLine0		;3	currentSpriteLine0 = SPRITE_HEIGHT-1
-skipActivatePlayer0:
-    ; See if we are drawing sprite data on this line. (Y:5~, N:6~)
-    lda currentSpriteLine0		;3
-    bmi endFaceStuff0			;2+	if (currentSpriteLine0 &lt; 0) goto endFaceStuff
-
-    ; Load sprite graphic and color buffers. (20~)
-    ldx animFrameLineCtr0		;3
-    lda llGraphicTable,x	    ;4
-    sta playerBuffer0			;3	playerBuffer0 = SpriteGraphicTable[animFrameLineCtr0]
-    ; Decrement our counters. (10~)
-    dec currentSpriteLine0		;5 currentSpriteLine0 -= 1
-    dec animFrameLineCtr0		;5
-    ; Manage the frame delay between face animations. 
-endFaceStuff0:
-    rts
 
 
-; Draw loo1
-loosDraw1:
-    ; Load Player sprite and color. (10~)
-    sta WSYNC
-    lda playerBuffer1			;2
-    sta GRP1					;3	GRP1 = playerBuffer1
-    lda spriteLineColor1			;2
-    sta COLUP1					;3	COLUP1 = spriteLineColor1
-    ; Clear the playerBuffer0. (5~)
-    lda #0						;2
-    sta playerBuffer1			;3	playerBuffer1 = 0    	
-    ; See if this is the line where we start drawing the sprite. (Y:10~, N:6~)
-    cpy spriteYPosition1			;3
-    bne skipActivatePlayer1		;2+	if (y != spriteYPosition1) goto SkipActivatePlayer
-
-    lda #SPRITE_HEIGHT-1		;2	else
-    sta currentSpriteLine1		;3	currentSpriteLine1 = SPRITE_HEIGHT-1
-skipActivatePlayer1:
-    ; See if we are drawing sprite data on this line. (Y:5~, N:6~)
-    lda currentSpriteLine1		;3
-    bmi endFaceStuff1			;2+	if (currentSpriteLine1 &lt; 0) goto endFaceStuff
-
-    ; Load sprite graphic and color buffers. (20~)
-    ldx animFrameLineCtr1		;3
-    lda llGraphicTable,x	    ;4
-    sta playerBuffer1			;3	playerBuffer1 = SpriteGraphicTable[animFrameLineCtr0]
-    ; Decrement our counters. (10~)
-    dec currentSpriteLine1		;5 currentSpriteLine1 -= 1
-    dec animFrameLineCtr1		;5
-    ; Manage the frame delay between face animations. 
-endFaceStuff1:
-    rts
 
 ballSetup:
     lda #%00010000
@@ -400,15 +395,6 @@ positionBall:
     sta HMBL
     rts
 
-ballDraw:
-    lda #0
-    sta ENABL
-    cpy ballYPosition
-    bne skipBallDraw
-    lda #2
-    sta ENABL
-skipBallDraw:
-    rts
 
 loosMovement0: ; down to right to up to left to....
     lda looDirection0
