@@ -120,12 +120,13 @@ naFrame:
     VERTICAL_SYNC  ;3 lines total 3
     lda #0
     sta VSYNC		; turn off VSYNC by clearing it
-    sta VBLANK      ; that too
+
     
     TIMER_SETUP 37 ; V-Blank 37 lines total 40
     jsr loosMovement0
     jsr loosMovement1
     TIMER_WAIT ;the V-Blank wait
+    sta VBLANK      ; that too
 ; skip 20 lines for positioning
     TIMER_SETUP 20 ; 20 lines total 60   
 ; draw the photo first ; 75 lines total 135
@@ -138,9 +139,9 @@ naFrame:
     jsr smartLoosSetup
     TIMER_WAIT
     jsr streetsDraw ; draw the streets one line at a time
-                    ; 84 lines total 238
+                    ; 60 lines total 212
 ; now wait the rest of the screen
-    TIMER_SETUP 12 ; 12 lines total 250
+    TIMER_SETUP 20 ; 20 lines total 232
     TIMER_WAIT
 ; now wait the overscan
     lda #%00000010				;2
@@ -218,23 +219,26 @@ streetsDraw:
     sta PF0
     sta PF1
     sta PF2
+    lda #1
 streetsInner:
     stx tempX
 ; Draw loo0
 loosDraw0:
     ; Load Player sprite and color. (10~)
-    sta WSYNC
+    ;sta WSYNC
     lda playerBuffer0			;2
     sta GRP0					;3	GRP0 = playerBuffer0
+    lda playerBuffer1			;2
+    sta GRP1	
     lda spriteLineColor0			;2
     sta COLUP0					;3	COLUP0 = spriteLineColor0
-    lda playerBuffer1			;2
-    sta GRP1					;3	GRP1 = playerBuffer1
+				;3	GRP1 = playerBuffer1
     lda spriteLineColor1			;2
     sta COLUP1	
     ; Clear the playerBuffer0. (5~)
     lda #0						;2
     sta playerBuffer0			;3	playerBuffer0 = 0    	        sta playerBuffer1			;3	playerBuffer1 = 0    	
+    sta playerBuffer1
     ; See if this is the line where we start drawing the sprite. (Y:10~, N:6~)
     cpy spriteYPosition0			;3
     bne skipActivateLoo0		;2+	if (y != spriteYPosition0) goto SkipActivatePlayer
@@ -283,6 +287,7 @@ ballDraw:
     sta ENABL
 skipBallDraw:
     ldx tempX
+    sta WSYNC
     dey
     beq streetsDone
     dex

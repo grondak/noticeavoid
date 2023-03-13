@@ -88,6 +88,7 @@ Have a good time. If this game helps you understand others, then it is a wild su
   3/7/2023: Fixed a minor timing issue for the lookie loo versus the playfield  
   3/8/2023: Added credits section to README.md and added 2nd lookie loo. Fixed CRT Probe timing errors  
   3/9/2023: Added the player as the ball and moved joystick control to the ball. 
+  3/11/2023: Cleaned up screen timing  
 
 
 ## Credits:
