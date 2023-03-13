@@ -10,8 +10,7 @@
 
 ; for the photo
 photoTemp           ds 1 ; temporary variable
-photoLines          ds 1; a better name
-; for the Lookie Loos Animation
+photoLines          ds 1; a better name; for the Lookie Loos Animation
 tempX               ds 1
 looDirection0       ds 1    ; #%00000001 for down for first loo
 spriteYPosition0    ds 1	; 192 is at the top of the screen, the constant VALUE_OF_Y_AT_SCREEN_BOTTOM gives us the bottom.
@@ -20,21 +19,26 @@ hPosition0          ds 1
 playerBuffer0       ds 1
 spriteMoving0       ds 1	; Boolean. We use this to see if we stopped moving
 animFrameLineCtr0   ds 1
+faceDelay0          ds 1
 spriteLineColor0    ds 1
 hPositionIndex0     ds 1
+faceDuration0       ds 1
 looDirection1       ds 1
 spriteYPosition1    ds 1	; 192 is at the top of the screen, the constant VALUE_OF_Y_AT_SCREEN_BOTTOM gives us the bottom.
-currentSpriteLine1  ds 1	; (0 &lt;= currentSpriteLine0 &lt; SPRITE_HEIGHT) for each frame
+currentSpriteLine1  ds 1	; (0 &lt;= currentSpriteLine1 &lt; SPRITE_HEIGHT) for each frame
 hPosition1          ds 1
 playerBuffer1       ds 1
 spriteMoving1       ds 1	; Boolean. We use this to see if we stopped moving
 animFrameLineCtr1   ds 1
+faceDelay1          ds 1
 spriteLineColor1    ds 1
 hPositionIndex1     ds 1
+faceDuration1       ds 1
 ballYPosition       ds 1
 ballHPosition       ds 1
 ballHPositionIndex  ds 1
 ballColor           ds 1
+
 
 ;------------------------------------------------
 ; Constants - some made at https://alienbill.com/2600/playerpalnext.html
@@ -46,6 +50,7 @@ PFFG = $0F                  ; the streets are a concrete jungle
 PFBG = $00                  ; everything else is a shadow
 ; for the Lookie Loos
 FACE_COLOR = $0F            ; bright white
+FACE_DURATION = 8
 SLO_MO_FACE_DURATION = 30	; Same as above, applicable when "slo-mo" is activated (i.e. player holds fire button).
 SPRITE_HEIGHT = 8			; Native number of pixels tall the sprite is (before being stretched by a 2LK or whatever).
 NUM_ANIMATION_FACES = 9		; Number of faces of animation. (!)Corresponds with number of color tables(!)
@@ -91,6 +96,12 @@ ballStartingHPosition = 15
 ; restart and when reset switch is pulled
 reset:	
     CLEAN_START
+    lda #FACE_DURATION
+    sta faceDuration0
+    sta faceDelay0
+    sta faceDuration1
+    sta faceDelay1
+
     lda #80
     sta hPositionIndex0	; initial x pos for loo0
     lda #28
@@ -107,6 +118,7 @@ reset:
     sta ballYPosition
     lda ballStartingHPosition
     sta ballHPositionIndex
+    sta ballHPositionIndex
     lda #PFBG
     sta COLUBK
     lda #PFFG
@@ -115,6 +127,7 @@ reset:
     sta CTRLPF
     lda #2
     sta ENABL
+    sta WSYNC
  ; draw one Notice Avoid Frame - 2 line kernel
 naFrame:
     VERTICAL_SYNC  ;3 lines total 3
@@ -148,6 +161,7 @@ naFrame:
     sta VBLANK           		;3 end of screen - enter blanking
     TIMER_SETUP 30 ; 30 lines total 262
     jsr readJoysticks
+    jsr animateLoos
     TIMER_WAIT
     jmp naFrame
 
@@ -549,6 +563,39 @@ skipMoveLeft:
 skipMoveRight:
     stx ballHPositionIndex
     rts
+
+; Manage the frame delay between face animations for loo0
+;
+animateLoos:
+    dec faceDelay0			;	faceDelay -= 1
+    lda faceDelay0			;
+    beq resetFaceDelay0		;	if (faceDelay == 0) then goto ResetFaceDelay		lda animFrameLineCtr0	;	&lt;-else force another frame of the current face
+    lda animFrameLineCtr0	;	&lt;-else force another frame of the current face
+    clc						;	by bringing the animFrameLineCtr where
+    adc #SPRITE_HEIGHT		;	it was at the start of this frame.
+    sta animFrameLineCtr0	;	(i.e. add SPRITE_HEIGHT to it)
+    jmp animateLoo1
+resetFaceDelay0:
+    lda faceDuration0
+    sta faceDelay0
+    ;	faceDelay = faceDuration
+; Manage the frame delay between face animations for loo1
+;
+animateLoo1:
+    dec faceDelay1			;	faceDelay -= 1
+    lda faceDelay1			;
+    beq resetFaceDelay1		;	if (faceDelay == 0) then goto ResetFaceDelay
+    lda animFrameLineCtr1	;	&lt;-else force another frame of the current face
+    clc						;	by bringing the animFrameLineCtr where
+    adc #SPRITE_HEIGHT		;	it was at the start of this frame.
+    sta animFrameLineCtr1	;	(i.e. add SPRITE_HEIGHT to it)
+    jmp endFaceStuff
+resetFaceDelay1:
+    lda faceDuration1
+    sta faceDelay1			;	faceDelay = faceDuration
+endFaceStuff:
+    rts
+
 
 ; https://www.flickr.com/photos/tokyodrifter/4132540774/in/photolist-7ibmp1-7kwDQr-6drtzM-7i7rqD-fVoZL2-283iFVj-7i7rtP-jYc5Bt-B84WBv-7ibmpY-bZTLow-dEY7Uh-qgio3b-ezNHdC-7i7rrr-7i7TLn-2j4x2vd-nfcDxV-4n8mWY-oMAYTH-dEZXBE-uW2BtA-2i4aDit-nYsFmQ-vo5JMz-5T3mhX-NQZLh3-bBAki7-eZwFDo-cm8FiA-2k3G9o1-qCxgBM-edxNEE-69tfxm-4VoNiK-d3aAQh-oZFiyw-nNrGQY-r63Zzb-BCmnBS-f5sW2P-2d3dWDA-agRe5T-a6uZq8-aNupzD-dRJQVC-6b3nTH-D9as7H-5p8iUR-h1bFAk
     align $100
