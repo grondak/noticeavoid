@@ -40,6 +40,7 @@ ballHPositionIndex  ds 1
 ballColor           ds 1
 
 
+
 ;------------------------------------------------
 ; Constants - some made at https://alienbill.com/2600/playerpalnext.html
 ;------------------------------------------------
@@ -50,7 +51,7 @@ PFFG = $0F                  ; the streets are a concrete jungle
 PFBG = $00                  ; everything else is a shadow
 ; for the Lookie Loos
 FACE_COLOR = $0F            ; bright white
-FACE_DURATION = 8
+FACE_DURATION = 72
 SLO_MO_FACE_DURATION = 30	; Same as above, applicable when "slo-mo" is activated (i.e. player holds fire button).
 SPRITE_HEIGHT = 8			; Native number of pixels tall the sprite is (before being stretched by a 2LK or whatever).
 NUM_ANIMATION_FACES = 9		; Number of faces of animation. (!)Corresponds with number of color tables(!)
@@ -63,6 +64,15 @@ LOO_DIRECTION_0 = %00000001
 LOO_DIRECTION_1 = %00000010
 ballStartingYPosition = 15
 ballStartingHPosition = 15
+trk0idx = $e0	; offset into tracks for channel 0 / integrated from https://8bitworkshop.com/v3.10.0/?platform=vcs&file=examples%2Fmusicplayer.a#
+trk1idx	= $e1	; offset into tracks for channel 1 / with improvements to allow for rests! WHAT?
+pat0idx	= $e2	; offset into patterns for channel 0
+pat1idx	= $e3	; offset into patterns for channel 1
+chan0dur = $e4	; current note duration channel 0
+chan1dur = $e5	; current note duration channel 1
+chan0note = $e6	; current note pitch channel 0
+chan1note = $e7	; current note pitch channel 1
+
 
 
 ;------------------------------------------------
@@ -90,6 +100,37 @@ ballStartingHPosition = 15
             dec spriteYPosition0		; we move a little extra to speed up vertical motion in 1LK
         ENDIF
     ENDM
+; Usage: NOTE pitch duration
+; Plays a note in a pattern.
+; pitch = 0-31
+; duration = 1-7, uses durFrames lookup table
+    MAC NOTE
+.pitch	SET {1}
+.durat	SET {2}
+    .byte (.pitch+(.durat<<5))
+    ENDM
+
+; Usage: TONE tone
+; Changes the tone in a pattern.
+; tone = 1-15
+    MAC TONE
+.tone	SET {1}
+    .byte .tone
+    ENDM
+
+; Usage: PATTERN address
+; Plays a pattern in a track.
+    MAC PATTERN
+.addr	SET {1}
+    .byte (.addr-patterns)
+    ENDM
+        
+; Usage: ENDTRACK
+; Marks the end of a track.
+    MAC ENDTRACK
+    .byte 0
+    ENDM
+
 
     seg	Code    	; start of main segment
     org $F000
@@ -101,7 +142,7 @@ reset:
     sta faceDelay0
     sta faceDuration1
     sta faceDelay1
-
+    jsr resetTrack
     lda #80
     sta hPositionIndex0	; initial x pos for loo0
     lda #28
@@ -138,6 +179,10 @@ naFrame:
     TIMER_SETUP 37 ; V-Blank 37 lines total 40
     jsr loosMovement0
     jsr loosMovement1
+    ldx #0
+    jsr musicFrame
+    ldx #1
+    jsr musicFrame
     TIMER_WAIT ;the V-Blank wait
     sta VBLANK      ; that too
 ; skip 20 lines for positioning
@@ -595,6 +640,68 @@ resetFaceDelay1:
     sta faceDelay1			;	faceDelay = faceDuration
 endFaceStuff:
     rts
+
+resetTrack:
+	lda #0
+    sta trk0idx
+    sta pat0idx
+    sta pat1idx
+    sta chan0dur
+    sta chan1dur
+    lda #track1-track0
+    sta trk1idx
+nextPattern:
+	ldy trk0idx,x
+	lda track0,y
+    beq resetTrack
+    sta pat0idx,x
+    inc trk0idx,x
+musicFrame:
+	dec chan0dur,x		; decrement note duration
+    bpl playNote		; only load if duration < 0
+tryAgain:
+	ldy pat0idx,x		; load index into pattern table
+	lda patterns,y		; load pattern code
+    beq nextPattern		; end of pattern?
+    inc pat0idx,x		; increment pattern index for next time
+    pha			; save A for later
+    clc			; clear carry for ROL
+    rol
+    rol
+    rol
+    rol			; rotate A left by 4 (same as ROR by 5)
+    and #7			; only take top 3 bits
+    beq noteTone		; duration zero? tone instruction
+    tay			; Y = duration
+    lda durFrames,y		; look up in duration table
+    sta chan0dur,x		; save note duration
+    pla			; pop saved value into A
+    and #$1f		; extract first 5 bits
+    sta chan0note,x		; store as note value
+playNote:
+	lda chan0note,x		; get note pitch for channel
+	sta AUDF0,x		; store frequency register
+	lda chan0dur,x		; get note duration remaining
+    clc
+    ror			; divide by 2
+    cmp #16
+    bcc noHighVol
+    lda #15			; make sure no greater than 15 (max)
+noHighVol:
+	sta AUDV0,x		; store volume register
+    lda chan0note,X
+    bne itWasNotARest
+    sta AUDV0,x
+itWasNotARest:
+	rts
+; This routine is called for duration 0 (TONE) codes
+noteTone:
+	pla
+    and #$f
+    beq nextPattern
+    sta AUDC0,x
+    jmp tryAgain
+
 
 
 ; https://www.flickr.com/photos/tokyodrifter/4132540774/in/photolist-7ibmp1-7kwDQr-6drtzM-7i7rqD-fVoZL2-283iFVj-7i7rtP-jYc5Bt-B84WBv-7ibmpY-bZTLow-dEY7Uh-qgio3b-ezNHdC-7i7rrr-7i7TLn-2j4x2vd-nfcDxV-4n8mWY-oMAYTH-dEZXBE-uW2BtA-2i4aDit-nYsFmQ-vo5JMz-5T3mhX-NQZLh3-bBAki7-eZwFDo-cm8FiA-2k3G9o1-qCxgBM-edxNEE-69tfxm-4VoNiK-d3aAQh-oZFiyw-nNrGQY-r63Zzb-BCmnBS-f5sW2P-2d3dWDA-agRe5T-a6uZq8-aNupzD-dRJQVC-6b3nTH-D9as7H-5p8iUR-h1bFAk
@@ -1206,7 +1313,148 @@ hPositionTable
     .byte $7C,$6C,$5C,$4C,$3C,$2C,$1C,$0C,$FC,$EC,$DC,$CC,$BC,$AC,$9C	; 116-130
     .byte $7D,$6D,$5D,$4D,$3D,$2D,$1D,$0D,$FD,$ED,$DD,$CD,$BD,$AD,$9D	; 131-145
     .byte $7E,$6E,$5E,$4E,$3E,$2E,$1E,$0E,$FE,$EE,$DE,$CE,$BE,$AE		; 146-159
-			
+
+
+patterns
+    TONE 0
+
+pattern00
+    TONE 3
+    NOTE 16,4
+    NOTE 2,4
+    NOTE 0,4
+    NOTE 0,4
+    NOTE 0,4
+    NOTE 4,4
+    NOTE 30,4
+    NOTE 16,4
+    TONE 0
+
+pattern10
+    TONE 6
+    NOTE 6,4
+    TONE 12
+    NOTE 16,4
+    NOTE 18,4
+    NOTE 19,4
+    NOTE 22,4
+    NOTE 23,4
+    NOTE 26,4
+    NOTE 23,4
+    NOTE 26,4
+    NOTE 23,4
+    NOTE 26,4
+    NOTE 23,4
+    NOTE 22,6
+    TONE 0
+pattern11
+    TONE 6
+    NOTE 6,6
+    NOTE 6,4
+    TONE 12
+    NOTE 16,4
+    NOTE 18,4
+    NOTE 19,4
+    NOTE 22,4
+    NOTE 23,4
+    NOTE 26,4
+    NOTE 23,4
+    NOTE 26,4
+    NOTE 26,4
+    NOTE 22,7
+    TONE 11
+    NOTE 0,7
+    NOTE 0,2
+    TONE 0
+pattern12
+    TONE 11
+    NOTE 0,5
+    TONE 12
+    NOTE 18,5
+    NOTE 18,3
+    NOTE 18,5
+    NOTE 16,6
+    NOTE 19,5
+    NOTE 22,3
+    TONE 6
+    NOTE 4,5
+    NOTE 4,4
+    TONE 12
+    NOTE 11,5
+    NOTE 11,3
+    NOTE 11,5
+    NOTE 10,6
+    NOTE 10,4
+    NOTE 17,3
+    NOTE 17,5
+    NOTE 16,5
+    TONE 0
+patternT1
+    TONE 1
+    NOTE 0,1
+    NOTE 29,2
+    NOTE 0,2
+    NOTE 29,2
+    NOTE 0,4
+    NOTE 25,3
+    NOTE 0,2
+    NOTE 29,4
+    NOTE 0,2
+    NOTE 29,4
+    NOTE 0,2
+    NOTE 29,3
+    NOTE 0,2
+    NOTE 25,3
+    NOTE 0,4
+    TONE 0
+
+patternT2
+    TONE 1
+    NOTE 0,1
+    NOTE 29,2
+    NOTE 0,2
+    NOTE 29,2
+    NOTE 0,4
+    NOTE 25,3
+    NOTE 0,2
+    NOTE 29,4
+    NOTE 0,2
+    NOTE 25,4
+    NOTE 0,2
+    NOTE 25,3
+    NOTE 0,2
+    NOTE 25,3
+    NOTE 0,4
+    TONE 0
+
+patternT3
+    TONE 8
+    NOTE 0,4
+    NOTE 29,3
+    NOTE 0,4
+    NOTE 27,7
+    NOTE 0,4
+    NOTE 26,7
+    NOTE 0,4
+    NOTE 25,7
+    TONE 0
+
+track0
+    PATTERN patternT1
+    PATTERN patternT1
+    PATTERN patternT1
+    PATTERN patternT2
+    ENDTRACK
+track1
+    PATTERN patternT3
+    PATTERN patternT3
+    PATTERN patternT3
+    PATTERN patternT3
+    ENDTRACK
+
+durFrames
+	.byte 0,4,8,12,16,24,32,48
+
     ORG $FFFA
 interruptVectors:
     .word reset          ; NMI

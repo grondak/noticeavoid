@@ -89,6 +89,7 @@ Have a good time. If this game helps you understand others, then it is a wild su
   3/8/2023: Added credits section to README.md and added 2nd lookie loo. Fixed CRT Probe timing errors  
   3/9/2023: Added the player as the ball and moved joystick control to the ball. 
   3/11/2023: Cleaned up screen timing  
+  3/13/2023: Added music and a static demo to ensure timing will work. Added rests to alienbill's call at the expense of the 0 divisor. I'm okay with that.   
 
 
 ## Credits:
