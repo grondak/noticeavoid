@@ -38,6 +38,19 @@ ballYPosition       ds 1
 ballHPosition       ds 1
 ballHPositionIndex  ds 1
 ballColor           ds 1
+temp                ds 1
+loopCount           ds 1; counts scanline when drawing
+
+; Pointers to bitmap for each digit
+digit0		.word
+digit1		.word
+digit2		.word
+digit3		.word
+digit4		.word
+digit5		.word
+
+BCDDeliveryScore    hex 123456
+BCDAnxietyScore     hex 332211
 
 
 
@@ -137,10 +150,14 @@ chan1note = $e7	; current note pitch channel 1
 ; restart and when reset switch is pulled
 reset:	
     CLEAN_START
+    lda #$12
+    sta BCDDeliveryScore
+    lda #$34
+    sta BCDDeliveryScore+1
+    lda #$56
+    sta BCDDeliveryScore+2
     lda #FACE_DURATION
-    sta faceDuration0
     sta faceDelay0
-    sta faceDuration1
     sta faceDelay1
     jsr resetTrack
     lda #80
@@ -177,17 +194,20 @@ naFrame:
 
     
     TIMER_SETUP 37 ; V-Blank 37 lines total 40
-    jsr loosMovement0
-    jsr loosMovement1
     ldx #0
     jsr musicFrame
     ldx #1
     jsr musicFrame
+    jsr digitsSetup
+    jsr getDigitPtrs	; get pointers
+    jsr loosMovement0
+    jsr loosMovement1
     TIMER_WAIT ;the V-Blank wait
     sta VBLANK      ; that too
 ; skip 20 lines for positioning
     TIMER_SETUP 20 ; 20 lines total 60   
 ; draw the photo first ; 75 lines total 135
+    jsr drawDigits		; draw digits
     jsr photoDraw 
 ; skip 19 more lines for positioning
     TIMER_SETUP 17 ; 17 lines total 152
@@ -195,6 +215,7 @@ naFrame:
     jsr ballSetup
 ; set up the Lookie Loos (1x)
     jsr smartLoosSetup
+
     TIMER_WAIT
     jsr streetsDraw ; draw the streets one line at a time
                     ; 60 lines total 212
@@ -210,6 +231,31 @@ naFrame:
     TIMER_WAIT
     jmp naFrame
 
+digitsSetup:
+    lda #$06
+    sta COLUP0
+    lda #$31
+    sta COLUP1
+    lda #THREE_COPIES
+    sta NUSIZ0
+    sta NUSIZ1
+; set horizontal position of player objects
+    sta WSYNC
+    SLEEP 20
+    sta RESP0
+    SLEEP 30
+    sta RESP1
+    sta HMP0
+    lda #$0
+    sta HMP1
+    sta WSYNC
+    sta HMOVE
+    SLEEP 24	; wait 24 cycles between write to HMOVE and HMxxx
+    sta HMCLR
+    lda #1
+    sta VDELP0
+    sta VDELP1
+    rts
 
 ; Set up to draw our current photo
 photoDraw:
@@ -621,7 +667,7 @@ animateLoos:
     sta animFrameLineCtr0	;	(i.e. add SPRITE_HEIGHT to it)
     jmp animateLoo1
 resetFaceDelay0:
-    lda faceDuration0
+    lda #FACE_DURATION
     sta faceDelay0
     ;	faceDelay = faceDuration
 ; Manage the frame delay between face animations for loo1
@@ -636,7 +682,7 @@ animateLoo1:
     sta animFrameLineCtr1	;	(i.e. add SPRITE_HEIGHT to it)
     jmp endFaceStuff
 resetFaceDelay1:
-    lda faceDuration1
+    lda #FACE_DURATION
     sta faceDelay1			;	faceDelay = faceDuration
 endFaceStuff:
     rts
@@ -703,6 +749,88 @@ noteTone:
     jmp tryAgain
 
 
+; Adds value to 6-BCD-digit score.
+; A = 1st BCD digit
+; X = 2nd BCD digit
+; Y = 3rd BCD digit
+addDeliveryScore subroutine
+    sed	; enter BCD mode
+    clc	; clear carry
+    sta temp
+    lda BCDDeliveryScore
+    adc temp
+    sta BCDDeliveryScore
+    stx temp
+    lda BCDDeliveryScore+1
+    adc temp
+    sta BCDDeliveryScore+1
+    sty temp
+    lda BCDDeliveryScore+2
+    adc temp
+    sta BCDDeliveryScore+2
+    cld	; exit BCD mode
+    rts
+
+getDigitPtrs subroutine
+    ldx #0	; leftmost bitmap
+    ldy #2	; start from most-sigificant BCD value
+.loop
+    lda BCDDeliveryScore,y	; get BCD value
+    and #$f0	; isolate high nibble (* 16)
+    lsr		; shift right 1 bit (* 8)
+    sta digit0,x	; store pointer lo byte
+    lda #>fontTable
+    sta digit0+1,x	; store pointer hi byte
+    inx
+    inx		; next bitmap pointer
+    lda BCDDeliveryScore,y	; get BCD value (again)
+    and #$f		; isolate low nibble
+    asl
+    asl
+    asl		; * 8
+    sta digit0,x	; store pointer lo byte
+    lda #>fontTable
+    sta digit0+1,x	; store pointer hi byte
+    inx
+    inx		; next bitmap pointer
+    dey		; next BCD value
+    bpl .loop	; repeat until < 0
+    rts
+
+; Display the resulting 48x8 bitmap
+; using the Digit0-5 pointers.
+drawDigits subroutine
+    sta WSYNC
+    SLEEP 40	; start near end of scanline
+    lda #7
+    sta loopCount
+bigLoop
+    ldy loopCount	; counts backwards
+    lda (digit0),y	; load B0 (1st sprite byte)
+    sta GRP0	; B0 -> [GRP0]
+    lda (digit1),y	; load B1 -> A
+    sta GRP1	; B1 -> [GRP1], B0 -> GRP0
+    sta WSYNC	; sync to next scanline
+    lda (digit2),y	; load B2 -> A
+    sta GRP0	; B2 -> [GRP0], B1 -> GRP1
+    lda (digit5),y	; load B5 -> A
+    sta temp	; B5 -> temp
+    lda (digit4),y	; load B4
+    tax		; -> X
+    lda (digit3),y	; load B3 -> A
+    ldy temp	; load B5 -> Y
+    sta GRP1	; B3 -> [GRP1]; B2 -> GRP0
+    stx GRP0	; B4 -> [GRP0]; B3 -> GRP1
+    sty GRP1	; B5 -> [GRP1]; B4 -> GRP0
+    sta GRP0	; ?? -> [GRP0]; B5 -> GRP1
+    dec loopCount	; go to next line
+    bpl bigLoop	; repeat until < 0    
+    lda #0		; clear the sprite registers
+    sta GRP0
+    sta GRP1
+    sta GRP0
+    sta GRP1
+    rts
 
 ; https://www.flickr.com/photos/tokyodrifter/4132540774/in/photolist-7ibmp1-7kwDQr-6drtzM-7i7rqD-fVoZL2-283iFVj-7i7rtP-jYc5Bt-B84WBv-7ibmpY-bZTLow-dEY7Uh-qgio3b-ezNHdC-7i7rrr-7i7TLn-2j4x2vd-nfcDxV-4n8mWY-oMAYTH-dEZXBE-uW2BtA-2i4aDit-nYsFmQ-vo5JMz-5T3mhX-NQZLh3-bBAki7-eZwFDo-cm8FiA-2k3G9o1-qCxgBM-edxNEE-69tfxm-4VoNiK-d3aAQh-oZFiyw-nNrGQY-r63Zzb-BCmnBS-f5sW2P-2d3dWDA-agRe5T-a6uZq8-aNupzD-dRJQVC-6b3nTH-D9as7H-5p8iUR-h1bFAk
     align $100
@@ -1454,6 +1582,13 @@ track1
 
 durFrames
 	.byte 0,4,8,12,16,24,32,48
+    align $100
+fontTable
+    hex 003c6666766e663c007e181818381818
+    hex 007e60300c06663c003c66061c06663c
+    hex 0006067f661e0e06003c6606067c607e
+    hex 003c66667c60663c00181818180c667e
+    hex 003c66663c66663c003c66063e66663c
 
     ORG $FFFA
 interruptVectors:
