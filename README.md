@@ -91,6 +91,7 @@ Have a good time. If this game helps you understand others, then it is a wild su
   3/11/2023: Cleaned up screen timing  
   3/13/2023: Added music and a static demo to ensure timing will work. Added rests to alienbill's call at the expense of the 0 divisor. I'm okay with that.   
   3/13/2023: Added 6-digit score and split results on both sides of the screen.  
+  3/14/2023: Understood and fixed up timing on 6-digit score.  
 
 
 ## Credits:

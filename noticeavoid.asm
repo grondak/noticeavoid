@@ -246,8 +246,9 @@ digitsSetup:
     ;SLEEP 5
     sta RESP1
 
-    lda #$10
+    lda #$F0
     sta HMP0
+    lda #00
     sta HMP1
     sta WSYNC
     sta HMOVE
