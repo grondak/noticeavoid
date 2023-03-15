@@ -49,8 +49,8 @@ digit3		.word
 digit4		.word
 digit5		.word
 
-BCDDeliveryScore    hex 123456
-BCDAnxietyScore     hex 332211
+BCDDeliveryScore    hex 000000
+BCDAnxietyScore     hex 000000
 
 
 
@@ -150,11 +150,11 @@ chan1note = $e7	; current note pitch channel 1
 ; restart and when reset switch is pulled
 reset:	
     CLEAN_START
-    lda #$12
+    lda #$56
     sta BCDDeliveryScore
     lda #$34
     sta BCDDeliveryScore+1
-    lda #$56
+    lda #$12
     sta BCDDeliveryScore+2
     lda #FACE_DURATION
     sta faceDelay0
@@ -241,12 +241,13 @@ digitsSetup:
     sta NUSIZ1
 ; set horizontal position of player objects
     sta WSYNC
-    SLEEP 20
+    SLEEP 25
     sta RESP0
-    SLEEP 30
+    ;SLEEP 5
     sta RESP1
+
+    lda #$10
     sta HMP0
-    lda #$0
     sta HMP1
     sta WSYNC
     sta HMOVE
@@ -688,7 +689,7 @@ endFaceStuff:
     rts
 
 resetTrack:
-	lda #0
+    lda #0
     sta trk0idx
     sta pat0idx
     sta pat1idx
@@ -697,17 +698,17 @@ resetTrack:
     lda #track1-track0
     sta trk1idx
 nextPattern:
-	ldy trk0idx,x
-	lda track0,y
+    ldy trk0idx,x
+    lda track0,y
     beq resetTrack
     sta pat0idx,x
     inc trk0idx,x
 musicFrame:
-	dec chan0dur,x		; decrement note duration
+    dec chan0dur,x		; decrement note duration
     bpl playNote		; only load if duration < 0
 tryAgain:
-	ldy pat0idx,x		; load index into pattern table
-	lda patterns,y		; load pattern code
+    ldy pat0idx,x		; load index into pattern table
+    lda patterns,y		; load pattern code
     beq nextPattern		; end of pattern?
     inc pat0idx,x		; increment pattern index for next time
     pha			; save A for later
@@ -725,24 +726,24 @@ tryAgain:
     and #$1f		; extract first 5 bits
     sta chan0note,x		; store as note value
 playNote:
-	lda chan0note,x		; get note pitch for channel
-	sta AUDF0,x		; store frequency register
-	lda chan0dur,x		; get note duration remaining
+    lda chan0note,x		; get note pitch for channel
+    sta AUDF0,x		; store frequency register
+    lda chan0dur,x		; get note duration remaining
     clc
     ror			; divide by 2
     cmp #16
     bcc noHighVol
     lda #15			; make sure no greater than 15 (max)
 noHighVol:
-	sta AUDV0,x		; store volume register
+    sta AUDV0,x		; store volume register
     lda chan0note,X
     bne itWasNotARest
     sta AUDV0,x
 itWasNotARest:
-	rts
+    rts
 ; This routine is called for duration 0 (TONE) codes
 noteTone:
-	pla
+    pla
     and #$f
     beq nextPattern
     sta AUDC0,x
@@ -1574,6 +1575,12 @@ track0
     PATTERN patternT2
     ENDTRACK
 track1
+    PATTERN patternT1
+    PATTERN patternT1
+    PATTERN patternT1
+    PATTERN patternT2
+    ENDTRACK
+track2
     PATTERN patternT3
     PATTERN patternT3
     PATTERN patternT3
