@@ -92,6 +92,8 @@ Have a good time. If this game helps you understand others, then it is a wild su
   3/13/2023: Added music and a static demo to ensure timing will work. Added rests to alienbill's call at the expense of the 0 divisor. I'm okay with that.   
   3/13/2023: Added 6-digit score and split results on both sides of the screen.  
   3/14/2023: Understood and fixed up timing on 6-digit score.  
+  3/17/2023: I got married to Shannon!
+  3/22/2023: Asymmetric playfield- can support your house/chad's house display, 72 cycles left per line for altered pixels (before/after the playfield write WSYNCs)  
 
 
 ## Credits:

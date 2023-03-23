@@ -220,7 +220,7 @@ naFrame:
     jsr streetsDraw ; draw the streets one line at a time
                     ; 60 lines total 212
 ; now wait the rest of the screen
-    TIMER_SETUP 20 ; 20 lines total 232
+    TIMER_SETUP 5 ; 20 lines total 232
     TIMER_WAIT
 ; now wait the overscan
     lda #%00000010				;2
@@ -315,14 +315,21 @@ photoLoop:
 
 ; dump in the mean streets
 streetsDraw:
-    ldy #28     ; 86 total playfield lines because this is a 3-line kernel
-    ldx #7      ; groups of 8 playfield lines
+    ldy #28     ; 56 total scan lines because we run WSYNC twice per Y
+    ldx #4      ; groups of 8 playfield lines
     lda #$FF
     sta PF0		; set the PF1 playfield pattern register
     sta PF1		; set the PF1 playfield pattern register
     sta PF2		; set he PF2 playfield pattern register
-    lda #0
+    lda roomStyle0,x
     sta WSYNC
+    sta PF0
+    sta PF1
+    sta PF2
+    nop
+    nop
+    nop
+    lda roomStyle1,x
     sta PF0
     sta PF1
     sta PF2
@@ -397,18 +404,29 @@ skipBallDraw:
     sta WSYNC
     dey
     beq streetsDone
+    lda roomStyle0,x
+    sta PF0
+    sta PF1
+    sta PF2
+    SLEEP 18
+    
+    lda roomStyle1,x
+    sta PF0
+    sta PF1
+    sta PF2
+    sta WSYNC
     dex
     bne streetsInner
-    ldx #7
+    ldx #4
     jmp streetsInner
 streetsDone:
-; clear out the playfield so it doesn't display when we don't want it.
     lda #$FF
     sta PF0		; set the PF1 playfield pattern register
     sta PF1		; set the PF1 playfield pattern register
     sta PF2		; set he PF2 playfield pattern register
     lda #0
     sta WSYNC
+; clear out the playfield so it doesn't display when we don't want it.
     sta PF0
     sta PF1
     sta PF2
@@ -1431,7 +1449,7 @@ pfData2:
     .byte #%11111111
     .byte #%11111111
 
-hPositionTable
+hPositionTable:
     .byte 				  $34,$24,$14,$04,$F4,$E4,$D4,$C4,$B4,$A4,$94	; 0-10
     .byte $75,$65,$55,$45,$35,$25,$15,$05,$F5,$E5,$D5,$C5,$B5,$A5,$95	; 11-25
     .byte $76,$66,$56,$46,$36,$26,$16,$06,$F6,$E6,$D6,$C6,$B6,$A6,$96	; 26-40
@@ -1445,10 +1463,10 @@ hPositionTable
     .byte $7E,$6E,$5E,$4E,$3E,$2E,$1E,$0E,$FE,$EE,$DE,$CE,$BE,$AE		; 146-159
 
 
-patterns
+patterns:
     TONE 0
 
-pattern00
+pattern00:
     TONE 3
     NOTE 16,4
     NOTE 2,4
@@ -1460,7 +1478,7 @@ pattern00
     NOTE 16,4
     TONE 0
 
-pattern10
+pattern10:
     TONE 6
     NOTE 6,4
     TONE 12
@@ -1477,7 +1495,7 @@ pattern10
     NOTE 23,4
     NOTE 22,6
     TONE 0
-pattern11
+pattern11:
     TONE 6
     NOTE 6,6
     NOTE 6,4
@@ -1496,7 +1514,7 @@ pattern11
     NOTE 0,7
     NOTE 0,2
     TONE 0
-pattern12
+pattern12:
     TONE 11
     NOTE 0,5
     TONE 12
@@ -1519,7 +1537,7 @@ pattern12
     NOTE 17,5
     NOTE 16,5
     TONE 0
-patternT1
+patternT1:
     TONE 1
     NOTE 0,1
     NOTE 29,2
@@ -1538,7 +1556,7 @@ patternT1
     NOTE 0,4
     TONE 0
 
-patternT2
+patternT2:
     TONE 1
     NOTE 0,1
     NOTE 29,2
@@ -1557,7 +1575,7 @@ patternT2
     NOTE 0,4
     TONE 0
 
-patternT3
+patternT3:
     TONE 8
     NOTE 0,4
     NOTE 29,3
@@ -1569,34 +1587,47 @@ patternT3
     NOTE 25,7
     TONE 0
 
-track0
+track0:
     PATTERN patternT1
     PATTERN patternT1
     PATTERN patternT1
     PATTERN patternT2
     ENDTRACK
-track1
+track1:
     PATTERN patternT1
     PATTERN patternT1
     PATTERN patternT1
     PATTERN patternT2
     ENDTRACK
-track2
+track2:
     PATTERN patternT3
     PATTERN patternT3
     PATTERN patternT3
     PATTERN patternT3
     ENDTRACK
 
-durFrames
+durFrames:
 	.byte 0,4,8,12,16,24,32,48
     align $100
-fontTable
+fontTable:
     hex 003c6666766e663c007e181818381818
     hex 007e60300c06663c003c66061c06663c
     hex 0006067f661e0e06003c6606067c607e
     hex 003c66667c60663c00181818180c667e
     hex 003c66663c66663c003c66063e66663c
+
+roomStyles:
+roomStyle0:
+    .byte %00000000
+    .byte %01010101
+    .byte %10101010
+    .byte %11111111
+roomStyle1:
+    .byte %11011011
+    .byte %00000000
+    .byte %00000000
+    .byte %01000010
+
 
     ORG $FFFA
 interruptVectors:
